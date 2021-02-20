@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -14,6 +15,7 @@ namespace MonoGameExample
         private SpriteBatch _spriteBatch;
         private Color _bgColor = new Color(30, 30, 30);
         private Point _logicalSize = new Point(1280, 720);
+        private SpriteFont _defaultFont;
 
         public Game1()
         {
@@ -52,6 +54,11 @@ namespace MonoGameExample
 
             _pixel = new Texture2D(_spriteBatch.GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
             _pixel.SetData(new[] {Color.White});
+            _defaultFont = Content.Load<SpriteFont>("04B09");
+
+            DebugDraw.DrawPoint += HandleDrawDebugPoint;
+            DebugDraw.DrawLine += HandleDrawDebugLine;
+            DebugDraw.DrawString += HandleDrawDebugString;
         }
 
         protected override void Update(GameTime gameTime)
@@ -65,26 +72,60 @@ namespace MonoGameExample
             base.Update(gameTime);
         }
 
+        private static readonly Color ColorA = Color.Aqua;
+        private static readonly Color ColorB = Color.Orange;
+        private static readonly Color ColorBSubA = Color.LightPink;
+        private static readonly Color ColorBSubAOrigin = Color.MediumPurple;
+
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(_bgColor);
 
             // TODO: Add your drawing code here
-            _spriteBatch.Begin();
+            _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
 
+            DrawUI();
 
+            // A
             var sphereShape = new Shape(ShapeType.Primitive, stackalloc Primitive[1]
             {
                 new Primitive(PrimitiveType.Sphere, 64, 0, 0.3f * MathF.PI, new SystemVector2(400, 320))
             });
-            DrawSupportMapping(sphereShape);
+            DrawSupportMapping(sphereShape, ColorA);
 
+            // B
             var capsuleShape = new Shape(ShapeType.MinkowskiSum, stackalloc Primitive[2]
             {
                 new Primitive(PrimitiveType.Sphere, 64, 0, 0, new SystemVector2(0, 0)),
                 new Primitive(PrimitiveType.Segment, 90, 0, 0.1f * MathF.PI, new SystemVector2(420, 250))
             });
-            DrawSupportMapping(capsuleShape);
+            DrawSupportMapping(capsuleShape, ColorB);
+
+            // B-A
+            var bSubAOrigin = _logicalSize.ToVector2() / 2;
+            DrawSupportMappingBSubtractA(sphereShape, capsuleShape, bSubAOrigin);
+            var result = MPR.Detect(sphereShape, capsuleShape);
+            
+
+            // Debug draws
+            for (var i = 0; i < _debugPoints.Count; i += 1)
+            {
+                _spriteBatch.Draw(_pixel, _debugPoints[i] + bSubAOrigin, null, ColorBSubA);
+            }
+            _debugPoints.Clear();
+
+            for (var i = 0; i < _debugLines.Count; i += 2)
+            {
+                _spriteBatch.DrawLine(_debugLines[i] + bSubAOrigin, _debugLines[i + 1] + bSubAOrigin, Color.Gray);
+            }
+            _debugLines.Clear();
+
+            for (var i = 0; i < _debugStrings.Count; i += 1)
+            {
+                _spriteBatch.DrawString(_defaultFont, _debugStrings[i].Item1, _debugStrings[i].Item2 + bSubAOrigin, ColorBSubA);
+            }
+            _debugStrings.Clear();
+
 
             _spriteBatch.End();
             base.Draw(gameTime);
@@ -92,17 +133,98 @@ namespace MonoGameExample
 
         private Texture2D _pixel;
         private ReadOnlyMemory<SystemVector2> _sampleNormals;
-        private const int SampleRate = 64;
+        private const int SampleRate = 128;
 
-        private void DrawSupportMapping(in Shape shape)
+        private void DrawSupportMapping(in Shape shape, Color color)
         {
             var samples = _sampleNormals.Span;
             for (var i = 0; i < samples.Length; i += 1)
             {
                 var support = SupportMapping.Support(shape, samples[i]);
                 var worldPosition = new Vector2(support.X, support.Y);
-                _spriteBatch.Draw(_pixel, worldPosition, null, Color.White);
+                _spriteBatch.Draw(_pixel, worldPosition, null, color);
             }
+        }
+
+        private void DrawSupportMappingBSubtractA(in Shape a, in Shape b, Vector2 origin)
+        {
+            // Draw origin
+            _spriteBatch.Draw(_pixel, origin + new Vector2(-2, -2), null, ColorBSubAOrigin);
+            _spriteBatch.Draw(_pixel, origin + new Vector2(2, -2), null, ColorBSubAOrigin);
+            _spriteBatch.Draw(_pixel, origin + new Vector2(-1, -1), null, ColorBSubAOrigin);
+            _spriteBatch.Draw(_pixel, origin + new Vector2(1, -1), null, ColorBSubAOrigin);
+            _spriteBatch.Draw(_pixel, origin, null, ColorBSubAOrigin);
+            _spriteBatch.Draw(_pixel, origin + new Vector2(-1, 1), null, ColorBSubAOrigin);
+            _spriteBatch.Draw(_pixel, origin + new Vector2(1, 1), null, ColorBSubAOrigin);
+            _spriteBatch.Draw(_pixel, origin + new Vector2(-2, 2), null, ColorBSubAOrigin);
+            _spriteBatch.Draw(_pixel, origin + new Vector2(2, 2), null, ColorBSubAOrigin);
+
+            var samples = _sampleNormals.Span;
+            for (var i = 0; i < samples.Length; i += 1)
+            {
+                var support = SupportMapping.SupportOfMinkowskiDifference(a, b, samples[i]);
+                var worldPosition = new Vector2(support.X, support.Y) + origin;
+                _spriteBatch.Draw(_pixel, worldPosition, null, ColorBSubA);
+            }
+        }
+
+        private void DrawUI()
+        {
+            const string asciiTestString =
+                " !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+
+            _spriteBatch.DrawString(_defaultFont, asciiTestString, Vector2.Zero, Color.LightGray, 0, Vector2.Zero, 2,
+                SpriteEffects.None, 0);
+
+            var stringPosition = new Vector2(0, _defaultFont.LineSpacing * 4);
+            _spriteBatch.DrawString(_defaultFont, "# Shape A", stringPosition, ColorA, 0, Vector2.Zero, 2,
+                SpriteEffects.None, 0);
+
+            stringPosition += new Vector2(0, _defaultFont.LineSpacing * 2);
+            _spriteBatch.DrawString(_defaultFont, "# Shape B", stringPosition, ColorB, 0, Vector2.Zero, 2,
+                SpriteEffects.None, 0);
+
+            stringPosition += new Vector2(0, _defaultFont.LineSpacing * 2);
+            _spriteBatch.DrawString(_defaultFont, "# Minkowski Difference B-A", stringPosition, ColorBSubA, 0,
+                Vector2.Zero, 2,
+                SpriteEffects.None, 0);
+
+            stringPosition += new Vector2(0, _defaultFont.LineSpacing * 2);
+            _spriteBatch.DrawString(_defaultFont, "# B-A Origin", stringPosition, ColorBSubAOrigin, 0, Vector2.Zero, 2,
+                SpriteEffects.None, 0);
+
+
+            const string note = "@ ViLAWAVE.Echollision MPR collision detection";
+            var noteSize = _defaultFont.MeasureString(note);
+            _spriteBatch.DrawString(_defaultFont, note,
+                _logicalSize.ToVector2() - noteSize * 2 - new Vector2(0, _defaultFont.LineSpacing * 2), Color.LightGray,
+                0,
+                Vector2.Zero, 2, SpriteEffects.None, 0);
+
+            var testSize = _defaultFont.MeasureString(asciiTestString);
+            _spriteBatch.DrawString(_defaultFont, asciiTestString, _logicalSize.ToVector2() - testSize * 2,
+                Color.LightGray, 0, Vector2.Zero, 2,
+                SpriteEffects.None, 0);
+        }
+
+        private List<Vector2> _debugPoints = new List<Vector2>();
+        private List<Vector2> _debugLines = new List<Vector2>();
+        private List<Tuple<string, Vector2>> _debugStrings = new List<Tuple<string, Vector2>>();
+
+        private void HandleDrawDebugPoint(SystemVector2 point)
+        {
+            _debugPoints.Add(new Vector2(point.X, point.Y));
+        }
+
+        private void HandleDrawDebugLine(SystemVector2 start, SystemVector2 end)
+        {
+            _debugLines.Add(new Vector2(start.X, start.Y));
+            _debugLines.Add(new Vector2(end.X, end.Y));
+        }
+
+        private void HandleDrawDebugString(string text, SystemVector2 position)
+        {
+            _debugStrings.Add(new Tuple<string, Vector2>(text, new Vector2(position.X, position.Y)));
         }
     }
 }

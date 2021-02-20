@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Numerics;
 
 namespace ViLAWAVE.Echollision
 {
@@ -11,6 +12,29 @@ namespace ViLAWAVE.Echollision
         {
             Type = type;
             Primitives = primitives;
+        }
+
+        public Vector2 GetCenter()
+        {
+            switch (Type)
+            {
+                case ShapeType.Primitive:
+                    return Primitives[0].GetCenter();
+
+                case ShapeType.MinkowskiSum:
+                {
+                    var center = Vector2.Zero;
+                    for (var i = 0; i < Primitives.Length; i += 1)
+                    {
+                        center += Primitives[i].GetCenter();
+                    }
+
+                    return center;
+                }
+
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
     }
 

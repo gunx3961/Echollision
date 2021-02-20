@@ -5,6 +5,14 @@ namespace ViLAWAVE.Echollision
 {
     public static class SupportMapping
     {
+        /// <summary>
+        /// Support of B-A
+        /// </summary>
+        public static Vector2 SupportOfMinkowskiDifference(in Shape a, in Shape b, Vector2 normal)
+        {
+            return Support(b, normal) - Support(a, -normal);
+        }
+
         public static Vector2 Support(in Shape shape, Vector2 normal)
         {
             switch (shape.Type)

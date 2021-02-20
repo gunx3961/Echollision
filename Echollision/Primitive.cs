@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 
 namespace ViLAWAVE.Echollision
 {
@@ -18,6 +19,17 @@ namespace ViLAWAVE.Echollision
             Ry = ry;
             Rotation = rotation;
             Translation = translation;
+        }
+
+        public Vector2 GetCenter()
+        {
+            return Type switch
+            {
+                PrimitiveType.Sphere => Translation,
+                PrimitiveType.Segment => Translation,
+                PrimitiveType.Point => Translation,
+                _ => throw new ArgumentOutOfRangeException()
+            };
         }
     }
 
