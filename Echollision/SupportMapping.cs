@@ -34,7 +34,6 @@ namespace ViLAWAVE.Echollision
 
                 case ShapeType.MaxSupport:
                 {
-                    var perpendicular = new Vector2(-normal.Y, normal.X);
                     var support = Support(shape.Primitives[0], normal);
                     var max = support;
 
