@@ -16,6 +16,9 @@ namespace MonoGameExample
         private Color _bgColor = new Color(30, 30, 30);
         private Point _logicalSize = new Point(1280, 720);
         private SpriteFont _defaultFont;
+        
+        private Vector2 _positionA = new Vector2(400, 320);
+        private Vector2 _positionB = new Vector2(420, 250);
 
         public Game1()
         {
@@ -68,6 +71,11 @@ namespace MonoGameExample
                 Exit();
 
             // TODO: Add your update logic here
+            var mouseState = Mouse.GetState();
+            if (mouseState.LeftButton == ButtonState.Pressed)
+            {
+                _positionA = mouseState.Position.ToVector2();
+            }
 
             base.Update(gameTime);
         }
@@ -89,7 +97,7 @@ namespace MonoGameExample
             // A
             var sphereShape = new Shape(ShapeType.Primitive, stackalloc Primitive[1]
             {
-                new Primitive(PrimitiveType.Sphere, 64, 0, 0.3f * MathF.PI, new SystemVector2(400, 320))
+                new Primitive(PrimitiveType.Sphere, 64, 0, 0.3f * MathF.PI, new SystemVector2(_positionA.X, _positionA.Y))
             });
             DrawSupportMapping(sphereShape, ColorA);
 
@@ -108,21 +116,21 @@ namespace MonoGameExample
             
 
             // Debug draws
-            for (var i = 0; i < _debugPoints.Count; i += 1)
-            {
-                _spriteBatch.Draw(_pixel, _debugPoints[i] + bSubAOrigin, null, ColorBSubA);
-            }
-            _debugPoints.Clear();
-
             for (var i = 0; i < _debugLines.Count; i += 2)
             {
-                _spriteBatch.DrawLine(_debugLines[i] + bSubAOrigin, _debugLines[i + 1] + bSubAOrigin, Color.Gray);
+                _spriteBatch.DrawLine(_debugLines[i] + bSubAOrigin, _debugLines[i + 1] + bSubAOrigin, Color.Green);
             }
             _debugLines.Clear();
 
+            for (var i = 0; i < _debugPoints.Count; i += 1)
+            {
+                DrawCross(_debugPoints[i] + bSubAOrigin, Color.LightGreen);
+            }
+            _debugPoints.Clear();
+
             for (var i = 0; i < _debugStrings.Count; i += 1)
             {
-                _spriteBatch.DrawString(_defaultFont, _debugStrings[i].Item1, _debugStrings[i].Item2 + bSubAOrigin, ColorBSubA);
+                _spriteBatch.DrawString(_defaultFont, _debugStrings[i].Item1, _debugStrings[i].Item2 + bSubAOrigin + new Vector2(2, 2), Color.LightGreen);
             }
             _debugStrings.Clear();
 
@@ -148,17 +156,6 @@ namespace MonoGameExample
 
         private void DrawSupportMappingBSubtractA(in Shape a, in Shape b, Vector2 origin)
         {
-            // Draw origin
-            _spriteBatch.Draw(_pixel, origin + new Vector2(-2, -2), null, ColorBSubAOrigin);
-            _spriteBatch.Draw(_pixel, origin + new Vector2(2, -2), null, ColorBSubAOrigin);
-            _spriteBatch.Draw(_pixel, origin + new Vector2(-1, -1), null, ColorBSubAOrigin);
-            _spriteBatch.Draw(_pixel, origin + new Vector2(1, -1), null, ColorBSubAOrigin);
-            _spriteBatch.Draw(_pixel, origin, null, ColorBSubAOrigin);
-            _spriteBatch.Draw(_pixel, origin + new Vector2(-1, 1), null, ColorBSubAOrigin);
-            _spriteBatch.Draw(_pixel, origin + new Vector2(1, 1), null, ColorBSubAOrigin);
-            _spriteBatch.Draw(_pixel, origin + new Vector2(-2, 2), null, ColorBSubAOrigin);
-            _spriteBatch.Draw(_pixel, origin + new Vector2(2, 2), null, ColorBSubAOrigin);
-
             var samples = _sampleNormals.Span;
             for (var i = 0; i < samples.Length; i += 1)
             {
@@ -166,6 +163,19 @@ namespace MonoGameExample
                 var worldPosition = new Vector2(support.X, support.Y) + origin;
                 _spriteBatch.Draw(_pixel, worldPosition, null, ColorBSubA);
             }
+        }
+
+        private void DrawCross(Vector2 position, Color color)
+        {
+            _spriteBatch.Draw(_pixel, position + new Vector2(-2, -2), null, color);
+            _spriteBatch.Draw(_pixel, position + new Vector2(2, -2), null, color);
+            _spriteBatch.Draw(_pixel, position + new Vector2(-1, -1), null, color);
+            _spriteBatch.Draw(_pixel, position + new Vector2(1, -1), null, color);
+            _spriteBatch.Draw(_pixel, position, null, color);
+            _spriteBatch.Draw(_pixel, position + new Vector2(-1, 1), null, color);
+            _spriteBatch.Draw(_pixel, position + new Vector2(1, 1), null, color);
+            _spriteBatch.Draw(_pixel, position + new Vector2(-2, 2), null, color);
+            _spriteBatch.Draw(_pixel, position + new Vector2(2, 2), null, color);
         }
 
         private void DrawUI()
