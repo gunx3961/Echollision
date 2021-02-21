@@ -29,28 +29,45 @@ namespace ViLAWAVE.Echollision
             normal = new Vector2(normal.Y, -normal.X);
             if (Vector2.Dot(-v0, normal) < 0) normal = -normal;
 
-            // var debugMidPoint = (v1 + v0) / 2;
-            // DebugDraw.OnDrawPoint(debugMidPoint);
-            // DebugDraw.OnDrawLine(debugMidPoint, debugMidPoint + normal * 100);
-            // DebugDraw.OnDrawString("n", debugMidPoint + normal * 100);
-
             var v2 = SupportMapping.SupportOfMinkowskiDifference(a, b, normal);
             DebugDraw.OnDrawString("v2", v2);
             DebugDraw.OnDrawPoint(v2);
             DebugDraw.OnDrawLine(v0, v2);
             DebugDraw.OnDrawLine(v1, v2);
 
-            normal = Vector2.Normalize(v2 - v1);
-            normal = new Vector2(normal.Y, -normal.X);
-            if (Vector2.Dot(normal, v0 - v1) > 0) normal = -normal; // Outer normal
+            Vector2 v3;
+            while (true)
+            {
+                normal = Vector2.Normalize(v2 - v1);
+                normal = new Vector2(normal.Y, -normal.X);
+                if (Vector2.Dot(normal, v0 - v1) > 0) normal = -normal; // Outer normal
 
-            var debugMidPoint = (v1 + v2) / 2;
-            DebugDraw.OnDrawLine(debugMidPoint, debugMidPoint + normal * 100);
-            DebugDraw.OnDrawString("n", debugMidPoint + normal * 100);
+                var debugMidPoint = (v1 + v2) / 2;
+                DebugDraw.OnDrawLine(debugMidPoint, debugMidPoint + normal * 100);
+                DebugDraw.OnDrawString("n", debugMidPoint + normal * 100);
 
-            if (Vector2.Dot(normal, -v1) < 0) return true;
+                if (Vector2.Dot(normal, -v1) < 0) return true;
 
-            return false;
+                v3 = SupportMapping.SupportOfMinkowskiDifference(a, b, normal);
+                DebugDraw.OnDrawLine(v0, v3);
+
+                if (Vector2.Dot(normal, v3) < 0) return false;
+
+                normal = Vector2.Normalize(v3 - v0);
+                normal = new Vector2(normal.Y, -normal.X);
+                var direction = v2 - v1;
+
+                if (Vector2.Dot(v2 - v1, normal) > 0 ^ Vector2.Dot(-v0, normal) > 0) // in v1 side
+                {
+                    v2 = v3;
+                    DebugDraw.OnDrawLine(v1, v3);
+                }
+                else
+                {
+                    v1 = v3;
+                    DebugDraw.OnDrawLine(v2, v3);
+                }
+            }
         }
     }
 }

@@ -16,7 +16,7 @@ namespace MonoGameExample
         private Color _bgColor = new Color(30, 30, 30);
         private Point _logicalSize = new Point(1280, 720);
         private SpriteFont _defaultFont;
-        
+
         private Vector2 _positionA = new Vector2(400, 320);
         private Vector2 _positionB = new Vector2(420, 250);
 
@@ -37,7 +37,7 @@ namespace MonoGameExample
             var normals = new System.Numerics.Vector2[SampleRate];
             for (var i = 0; i < SampleRate; i += 1)
             {
-                var radius = MathF.PI * 2 * (i / (float) SampleRate);
+                var radius = MathF.PI * 2 * (i / (float)SampleRate);
                 var x = MathF.Sin(radius);
                 var y = MathF.Cos(radius);
                 var n = SystemVector2.Normalize(new SystemVector2(x, y));
@@ -56,7 +56,7 @@ namespace MonoGameExample
             // TODO: use this.Content to load your game content here
 
             _pixel = new Texture2D(_spriteBatch.GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
-            _pixel.SetData(new[] {Color.White});
+            _pixel.SetData(new[] { Color.White });
             _defaultFont = Content.Load<SpriteFont>("04B09");
 
             DebugDraw.DrawPoint += HandleDrawDebugPoint;
@@ -82,8 +82,8 @@ namespace MonoGameExample
 
         private static readonly Color ColorA = Color.Aqua;
         private static readonly Color ColorB = Color.Orange;
-        private static readonly Color ColorBSubA = Color.LightPink;
-        private static readonly Color ColorBSubAOrigin = Color.MediumPurple;
+        private static readonly Color ColorBSubA = Color.White;
+        private static readonly Color ColorCollision = Color.Yellow;
 
         protected override void Draw(GameTime gameTime)
         {
@@ -110,10 +110,10 @@ namespace MonoGameExample
             DrawSupportMapping(capsuleShape, ColorB);
 
             // B-A
-            var bSubAOrigin = _logicalSize.ToVector2() / 2;
-            DrawSupportMappingBSubtractA(sphereShape, capsuleShape, bSubAOrigin);
             var result = MPR.Detect(sphereShape, capsuleShape);
-            
+            var bSubAOrigin = _logicalSize.ToVector2() / 2;
+            DrawSupportMappingBSubtractA(sphereShape, capsuleShape, bSubAOrigin, result ? ColorCollision : ColorBSubA);
+
 
             // Debug draws
             for (var i = 0; i < _debugLines.Count; i += 2)
@@ -146,22 +146,35 @@ namespace MonoGameExample
         private void DrawSupportMapping(in Shape shape, Color color)
         {
             var samples = _sampleNormals.Span;
+            var lastPosition = Vector2.Zero;
             for (var i = 0; i < samples.Length; i += 1)
             {
                 var support = SupportMapping.Support(shape, samples[i]);
                 var worldPosition = new Vector2(support.X, support.Y);
                 _spriteBatch.Draw(_pixel, worldPosition, null, color);
+                if (i > 0 && (worldPosition - lastPosition).LengthSquared() > 100)
+                {
+                    _spriteBatch.DrawLine(worldPosition, lastPosition, color, 0.4f);
+                }
+                lastPosition = worldPosition;
             }
         }
 
-        private void DrawSupportMappingBSubtractA(in Shape a, in Shape b, Vector2 origin)
+        private void DrawSupportMappingBSubtractA(in Shape a, in Shape b, Vector2 origin, Color color)
         {
             var samples = _sampleNormals.Span;
+            var lastPosition = Vector2.Zero;
             for (var i = 0; i < samples.Length; i += 1)
             {
                 var support = SupportMapping.SupportOfMinkowskiDifference(a, b, samples[i]);
                 var worldPosition = new Vector2(support.X, support.Y) + origin;
-                _spriteBatch.Draw(_pixel, worldPosition, null, ColorBSubA);
+                _spriteBatch.Draw(_pixel, worldPosition, null, color);
+
+                if (i > 0 && (worldPosition - lastPosition).LengthSquared() > 100)
+                {
+                    _spriteBatch.DrawLine(worldPosition, lastPosition, color, 0.4f);
+                }
+                lastPosition = worldPosition;
             }
         }
 
@@ -200,7 +213,7 @@ namespace MonoGameExample
                 SpriteEffects.None, 0);
 
             stringPosition += new Vector2(0, _defaultFont.LineSpacing * 2);
-            _spriteBatch.DrawString(_defaultFont, "# B-A Origin", stringPosition, ColorBSubAOrigin, 0, Vector2.Zero, 2,
+            _spriteBatch.DrawString(_defaultFont, "# Collision", stringPosition, ColorCollision, 0, Vector2.Zero, 2,
                 SpriteEffects.None, 0);
 
 
