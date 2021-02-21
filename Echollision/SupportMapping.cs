@@ -32,6 +32,21 @@ namespace ViLAWAVE.Echollision
                     return support;
                 }
 
+                case ShapeType.MaxSupport:
+                {
+                    var perpendicular = new Vector2(-normal.Y, normal.X);
+                    var support = Support(shape.Primitives[0], normal);
+                    var max = support;
+
+                    for (var i = 1; i < shape.Primitives.Length; i += 1)
+                    {
+                        support = Support(shape.Primitives[i], normal);
+                        if (Vector2.Dot(normal, support - max) > 0) max = support;
+                    }
+
+                    return max;
+                }
+
                 default:
                     throw new ArgumentOutOfRangeException();
             }

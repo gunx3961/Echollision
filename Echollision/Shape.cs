@@ -32,6 +32,17 @@ namespace ViLAWAVE.Echollision
                     return center;
                 }
 
+                case ShapeType.MaxSupport:
+                {
+                    var center = Vector2.Zero;
+                    for (var i = 0; i < Primitives.Length; i += 1)
+                    {
+                        center += Primitives[i].GetCenter();
+                    }
+
+                    return center / Primitives.Length;
+                }
+
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -42,5 +53,6 @@ namespace ViLAWAVE.Echollision
     {
         Primitive = 0,
         MinkowskiSum = 1,
+        MaxSupport = 2,
     }
 }

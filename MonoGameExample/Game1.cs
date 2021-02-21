@@ -92,12 +92,18 @@ namespace MonoGameExample
             // TODO: Add your drawing code here
             _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
 
-            DrawUI();
+            DrawUI(gameTime);
 
             // A
-            var sphereShape = new Shape(ShapeType.Primitive, stackalloc Primitive[1]
+            // var sphereShape = new Shape(ShapeType.Primitive, stackalloc Primitive[1]
+            // {
+            //     new Primitive(PrimitiveType.Sphere, 64, 0, 0.3f * MathF.PI, new SystemVector2(_positionA.X, _positionA.Y))
+            // });
+            var sphereShape = new Shape(ShapeType.MaxSupport, stackalloc Primitive[3]
             {
-                new Primitive(PrimitiveType.Sphere, 64, 0, 0.3f * MathF.PI, new SystemVector2(_positionA.X, _positionA.Y))
+                new Primitive(PrimitiveType.Point, 0, 0, 0, new SystemVector2(_positionA.X - 25, _positionA.Y - 80)),
+                new Primitive(PrimitiveType.Point, 0, 0, 0, new SystemVector2(_positionA.X + 75, _positionA.Y + 65)),
+                new Primitive(PrimitiveType.Point, 0, 0, 0, new SystemVector2(_positionA.X - 40, _positionA.Y + 55)),
             });
             DrawSupportMapping(sphereShape, ColorA);
 
@@ -191,7 +197,7 @@ namespace MonoGameExample
             _spriteBatch.Draw(_pixel, position + new Vector2(2, 2), null, color);
         }
 
-        private void DrawUI()
+        private void DrawUI(GameTime gameTime)
         {
             const string asciiTestString =
                 " !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
@@ -216,6 +222,11 @@ namespace MonoGameExample
             _spriteBatch.DrawString(_defaultFont, "# Collision", stringPosition, ColorCollision, 0, Vector2.Zero, 2,
                 SpriteEffects.None, 0);
 
+            var fps = Math.Ceiling(1.0 / gameTime.ElapsedGameTime.TotalSeconds);
+            var fpsText = $"FPS:{fps.ToString()}";
+            stringPosition = new Vector2(_logicalSize.X, _defaultFont.LineSpacing * 6) - _defaultFont.MeasureString(fpsText) * 2f;
+            _spriteBatch.DrawString(_defaultFont, fpsText, stringPosition, Color.LightGray, 0, Vector2.Zero, 2,
+                SpriteEffects.None, 0);
 
             const string note = "@ ViLAWAVE.Echollision MPR collision detection";
             var noteSize = _defaultFont.MeasureString(note);

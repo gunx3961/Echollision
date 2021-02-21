@@ -55,7 +55,6 @@ namespace ViLAWAVE.Echollision
 
                 normal = Vector2.Normalize(v3 - v0);
                 normal = new Vector2(normal.Y, -normal.X);
-                var direction = v2 - v1;
 
                 if (Vector2.Dot(v2 - v1, normal) > 0 ^ Vector2.Dot(-v0, normal) > 0) // in v1 side
                 {
