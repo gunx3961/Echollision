@@ -8,25 +8,25 @@ namespace ViLAWAVE.Echollision
         /// <summary>
         /// Support of B-A
         /// </summary>
-        public static Vector2 SupportOfMinkowskiDifference(in Shape a, in Shape b, Vector2 normal)
+        public static Vector2 SupportOfMinkowskiDifference(in ShapeLegacy a, in ShapeLegacy b, Vector2 normal)
         {
             return Support(b, normal) - Support(a, -normal);
         }
 
-        public static Vector2 Support(in Shape shape, Vector2 normal)
+        public static Vector2 Support(in ShapeLegacy shapeLegacy, Vector2 normal)
         {
-            switch (shape.Type)
+            switch (shapeLegacy.Type)
             {
                 case ShapeType.Primitive:
-                    return Support(shape.Primitives[0], normal);
+                    return Support(shapeLegacy.Primitives[0], normal);
 
                 case ShapeType.MinkowskiSum:
                 {
                     var support = Vector2.Zero;
 
-                    for (var i = 0; i < shape.Primitives.Length; i += 1)
+                    for (var i = 0; i < shapeLegacy.Primitives.Length; i += 1)
                     {
-                        support += Support(shape.Primitives[i], normal);
+                        support += Support(shapeLegacy.Primitives[i], normal);
                     }
 
                     return support;
@@ -34,12 +34,12 @@ namespace ViLAWAVE.Echollision
 
                 case ShapeType.MaxSupport:
                 {
-                    var support = Support(shape.Primitives[0], normal);
+                    var support = Support(shapeLegacy.Primitives[0], normal);
                     var max = support;
 
-                    for (var i = 1; i < shape.Primitives.Length; i += 1)
+                    for (var i = 1; i < shapeLegacy.Primitives.Length; i += 1)
                     {
-                        support = Support(shape.Primitives[i], normal);
+                        support = Support(shapeLegacy.Primitives[i], normal);
                         if (Vector2.Dot(normal, support - max) > 0) max = support;
                     }
 

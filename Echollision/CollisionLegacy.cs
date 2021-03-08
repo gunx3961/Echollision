@@ -3,9 +3,9 @@ using System.Numerics;
 
 namespace ViLAWAVE.Echollision
 {
-    public static class MPR
+    public static class CollisionLegacy
     {
-        public static bool Detect(Shape a, Shape b)
+        public static bool DetectDiscrete(in ShapeLegacy a, in ShapeLegacy b)
         {
             DebugDraw.OnDrawString("origin", Vector2.Zero);
             DebugDraw.OnDrawPoint(Vector2.Zero);
@@ -67,6 +67,16 @@ namespace ViLAWAVE.Echollision
                     DebugDraw.OnDrawLine(v2, v3);
                 }
             }
+        }
+
+        public static bool DetectContinuous(in ShapeLegacy a, Vector2 translationA, in ShapeLegacy b, Vector2 translationB)
+        {
+            // Combine translation of both to shape A
+            // Treat shape B as a static shape 
+            var translationAToB = translationA - translationB;
+            
+            
+            return false;
         }
     }
 }
