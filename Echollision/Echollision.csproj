@@ -7,8 +7,4 @@
     <RootNamespace>ViLAWAVE.Echollision</RootNamespace>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Folder Include="Collider" />
-  </ItemGroup>
-
 </Project>

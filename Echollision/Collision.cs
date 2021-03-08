@@ -26,8 +26,36 @@ namespace ViLAWAVE.Echollision
         //     return supportWorld;
         //     return Vector2.Zero;
         // }
-        
-        // public static Detect()
+
+        public static bool Detect(in Primitive a, in Primitive b)
+        {
+            return false;
+        }
+
+        public static bool Detect(in Primitive a, in MinkowskiSum b)
+        {
+            return false;
+        }
+
+        public static bool Detect(in Primitive a, in MaxSupport b)
+        {
+            return false;
+        }
+
+        public static bool Detect(in MinkowskiSum a, in MinkowskiSum b)
+        {
+            return false;
+        }
+
+        public static bool Detect(in MinkowskiSum a, in MaxSupport b)
+        {
+            return false;
+        }
+
+        public static bool Detect(in MaxSupport a, in MaxSupport b)
+        {
+            return false;
+        }
 
         /// <summary>
         /// Returns the support point of Minkowski sum of primitives in normal direction.
