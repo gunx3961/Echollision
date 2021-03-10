@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using ViLAWAVE.Echollision;
+using ViLAWAVE.Echollision.Collider;
 using PrimitiveType = ViLAWAVE.Echollision.PrimitiveType;
 using SystemVector2 = System.Numerics.Vector2;
 
@@ -20,6 +21,11 @@ namespace MonoGameExample
         private Vector2 _positionA = new Vector2(400, 320);
         private Vector2 _positionB = new Vector2(420, 250);
 
+        // new
+        private bool _isCollide = false;
+        private ICollider _colliderA;
+        private ICollider _colliderB;
+
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
@@ -33,7 +39,7 @@ namespace MonoGameExample
         protected override void Initialize()
         {
             // TODO: Add your initialization logic here
-            
+
             _graphics.PreferredBackBufferWidth = _logicalSize.X;
             _graphics.PreferredBackBufferHeight = _logicalSize.Y;
             _graphics.ApplyChanges();
@@ -49,6 +55,19 @@ namespace MonoGameExample
             }
 
             _sampleNormals = normals;
+
+            _colliderA = new MinkowskiSumCollider(new ICollider[]
+            {
+                new SphereCollider(100),
+                new SegmentCollider(new SystemVector2(-100, -100), new SystemVector2(200, 200))
+            });
+            _colliderB = new ConvexCollider(new SystemVector2[]
+            {
+                new SystemVector2(-100, -100),
+                new SystemVector2(100, -100),
+                new SystemVector2(100, 100),
+                new SystemVector2(-100, 100)
+            });
 
             base.Initialize();
         }
@@ -81,6 +100,12 @@ namespace MonoGameExample
                 _positionA = mouseState.Position.ToVector2();
             }
 
+            var translationA = new SystemVector2(_positionA.X, _positionA.Y);
+            var transformA = new Transform(translationA, 0);
+            var translationB = new SystemVector2(_positionB.X, _positionB.Y);
+            var transformB = new Transform(translationB, 0);
+            _isCollide = Collision.Detect(_colliderA, transformA, _colliderB, transformB);
+
             base.Update(gameTime);
         }
 
@@ -99,28 +124,19 @@ namespace MonoGameExample
             DrawUI(gameTime);
 
             // A
-            var shapeA = new ShapeLegacy(ShapeType.MaxSupport, stackalloc Primitive[4]
-            {
-                new Primitive(PrimitiveType.Point, 0, 0, 0, new SystemVector2(_positionA.X - 200, _positionA.Y - 20)),
-                new Primitive(PrimitiveType.Point, 0, 0, 0, new SystemVector2(_positionA.X + 200, _positionA.Y + 20)),
-                new Primitive(PrimitiveType.Point, 0, 0, 0, new SystemVector2(_positionA.X - 230, _positionA.Y + 20)),
-                new Primitive(PrimitiveType.Point, 0, 0, 0, new SystemVector2(_positionA.X + 230, _positionA.Y - 20)),
-            });
-            DrawSupportMapping(shapeA, ColorA);
+            var translationA = new SystemVector2(_positionA.X, _positionA.Y);
+            var transformA = new Transform(translationA, 0);
+            DrawCollider(_colliderA, transformA, ColorA);
 
             // B
-            var shapeB = new ShapeLegacy(ShapeType.MinkowskiSum, stackalloc Primitive[2]
-            {
-                new Primitive(PrimitiveType.Sphere, 32, 0, 0, SystemVector2.Zero),
-                new Primitive(PrimitiveType.Segment, 90, 0, 0.1f * MathF.PI, new SystemVector2(420, 250))
-            });
-            DrawSupportMapping(shapeB, ColorB);
+            var translationB = new SystemVector2(_positionB.X, _positionB.Y);
+            var transformB = new Transform(translationB, 0);
+            DrawCollider(_colliderB, transformB, ColorB);
 
             // B-A
-            var result = CollisionLegacy.DetectDiscrete(shapeA, shapeB);
             var bSubAOrigin = _logicalSize.ToVector2() * 2 / 3;
-            DrawSupportMappingBSubtractA(shapeA, shapeB, bSubAOrigin, result ? ColorCollision : ColorBSubA);
-
+            DrawMinkowskiDifference(_colliderA, transformA, _colliderB, transformB, bSubAOrigin,
+                _isCollide ? ColorCollision : ColorBSubA);
 
             // Debug draws
             for (var i = 0; i < _debugLines.Count; i += 2)
@@ -145,7 +161,6 @@ namespace MonoGameExample
 
             _debugStrings.Clear();
 
-
             _spriteBatch.End();
             base.Draw(gameTime);
         }
@@ -154,52 +169,54 @@ namespace MonoGameExample
         private ReadOnlyMemory<SystemVector2> _sampleNormals;
         private const int SampleRate = 128;
 
-        private void DrawSupportMapping(in ShapeLegacy shapeLegacy, Color color)
+        private void DrawCollider(ICollider collider, Transform transform, Color color)
         {
+            Span<Vector2> samplePoints = stackalloc Vector2[_sampleNormals.Length];
+
             var samples = _sampleNormals.Span;
-            var lastPosition = Vector2.Zero;
-            Vector2 first = Vector2.Zero, last = Vector2.Zero;
             for (var i = 0; i < samples.Length; i += 1)
             {
-                var support = SupportMapping.Support(shapeLegacy, samples[i]);
+                var support = collider.WorldSupport(transform, samples[i]);
                 var worldPosition = new Vector2(support.X, support.Y);
-                _spriteBatch.Draw(_pixel, worldPosition, null, color);
-                if (i > 0 && (worldPosition - lastPosition).LengthSquared() > 100)
-                {
-                    _spriteBatch.DrawLine(worldPosition, lastPosition, color, 1);
-                }
-
-                lastPosition = worldPosition;
-                if (i == 0) first = worldPosition;
-                if (i == samples.Length - 1) last = worldPosition;
+                samplePoints[i] = worldPosition;
             }
 
-            if ((first - last).LengthSquared() > 100)
-            {
-                _spriteBatch.DrawLine(first, last, color, 1);
-            }
+            DrawShapeOfSamplePoints(samplePoints, color);
         }
 
-        private void DrawSupportMappingBSubtractA(in ShapeLegacy a, in ShapeLegacy b, Vector2 origin, Color color)
+        private void DrawMinkowskiDifference(ICollider a, Transform ta, ICollider b, Transform tb, Vector2 originAt,
+            Color color)
         {
+            Span<Vector2> samplePoints = stackalloc Vector2[_sampleNormals.Length];
             var samples = _sampleNormals.Span;
-            var lastPosition = Vector2.Zero;
-            Vector2 first = Vector2.Zero, last = Vector2.Zero;
             for (var i = 0; i < samples.Length; i += 1)
             {
-                var support = SupportMapping.SupportOfMinkowskiDifference(a, b, samples[i]);
-                var worldPosition = new Vector2(support.X, support.Y) + origin;
-                _spriteBatch.Draw(_pixel, worldPosition, null, color);
+                var support = Collision.SupportOfMinkowskiDifference(a, ta, b, tb, samples[i]);
+                var worldPosition = new Vector2(support.X, support.Y) + originAt;
+                samplePoints[i] = worldPosition;
+            }
 
-                if (i > 0 && (worldPosition - lastPosition).LengthSquared() > 100)
+            DrawShapeOfSamplePoints(samplePoints, color);
+        }
+
+        private void DrawShapeOfSamplePoints(in Span<Vector2> points, Color color)
+        {
+            var prev = Vector2.Zero;
+            Vector2 first = Vector2.Zero, last = Vector2.Zero;
+            for (var i = 0; i < points.Length; i += 1)
+            {
+                var position = points[i];
+                _spriteBatch.Draw(_pixel, position, null, color);
+
+                if (i > 0 && (position - prev).LengthSquared() > 100)
                 {
-                    _spriteBatch.DrawLine(worldPosition, lastPosition, color, 1);
+                    _spriteBatch.DrawLine(position, prev, color, 1);
                 }
 
-                lastPosition = worldPosition;
+                prev = position;
 
-                if (i == 0) first = worldPosition;
-                if (i == samples.Length - 1) last = worldPosition;
+                if (i == 0) first = position;
+                if (i == points.Length - 1) last = position;
             }
 
             if ((first - last).LengthSquared() > 100)
