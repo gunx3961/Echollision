@@ -11,8 +11,8 @@ namespace ViLAWAVE.Echollision
             DebugDraw.OnDrawString("origin", Vector2.Zero);
             DebugDraw.OnDrawPoint(Vector2.Zero);
 
-            var centerA = a.Center;
-            var centerB = b.Center;
+            var centerA = a.WorldCenter(transformA);
+            var centerB = b.WorldCenter(transformB);
             var v0 = centerB - centerA;
             if (v0 == Vector2.Zero) v0 = new Vector2(0.00001f, 0);
 
@@ -84,6 +84,12 @@ namespace ViLAWAVE.Echollision
             var supportLocal = shape.Support(localNormal);
             var supportWorld = Vector2.Transform(supportLocal, rotation) + transform.Translation;
             return supportWorld;
+        }
+
+        public static Vector2 WorldCenter(this ICollider shape, in Transform transform)
+        {
+            var rotation = Matrix3x2.CreateRotation(transform.Rotation);
+            return Vector2.Transform(shape.Center, rotation) + transform.Translation;
         }
 
         public static Vector2 SupportOfMinkowskiDifference(ICollider a, in Transform ta, ICollider b, in Transform tb,
