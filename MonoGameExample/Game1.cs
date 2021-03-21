@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.Input;
 using ViLAWAVE.Echollision;
 using ViLAWAVE.Echollision.Collider;
-using PrimitiveType = ViLAWAVE.Echollision.PrimitiveType;
 using SystemVector2 = System.Numerics.Vector2;
 
 namespace MonoGameExample
@@ -25,6 +25,12 @@ namespace MonoGameExample
         private bool _isCollide = false;
         private ICollider _colliderA;
         private ICollider _colliderB;
+        private SystemVector2 _movementA = new SystemVector2(100, 100);
+        private SystemVector2 _movementB = new SystemVector2(-160, 80);
+        private float _ratioBase = 0f;
+        private Vector2 _ratioAdjustRelativePosition = Vector2.Zero;
+        private float _ratioAdjust = 0f;
+        private float _ratio => Math.Clamp(_ratioBase + _ratioAdjust, 0f, 1f);
 
         public Game1()
         {
@@ -56,11 +62,7 @@ namespace MonoGameExample
 
             _sampleNormals = normals;
 
-            _colliderA = new MinkowskiSumCollider(new ICollider[]
-            {
-                new SphereCollider(100),
-                new SegmentCollider(new SystemVector2(-100, -100), new SystemVector2(200, 200))
-            });
+            _colliderA = new SphereCollider(100);
             _colliderB = new ConvexCollider(new SystemVector2[]
             {
                 new SystemVector2(-100, -100),
@@ -93,18 +95,32 @@ namespace MonoGameExample
                 Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
-            // TODO: Add your update logic here
-            var mouseState = Mouse.GetState();
+            var mouseState = MouseExtended.GetState();
             if (mouseState.LeftButton == ButtonState.Pressed)
             {
                 _positionA = mouseState.Position.ToVector2();
+            }
+            
+            // Ratio control
+            if (mouseState.WasButtonJustDown(MouseButton.Right))
+            {
+                _ratioAdjustRelativePosition = mouseState.Position.ToVector2();
+            }
+            if (mouseState.RightButton == ButtonState.Pressed)
+            {
+                _ratioAdjust = (mouseState.Position.Y - _ratioAdjustRelativePosition.Y) * 2 / _logicalSize.Y;
+            }
+            if (mouseState.WasButtonJustUp(MouseButton.Right))
+            {
+                _ratioBase = _ratio;
+                _ratioAdjust = 0;
             }
 
             var translationA = new SystemVector2(_positionA.X, _positionA.Y);
             var transformA = new Transform(translationA, 0);
             var translationB = new SystemVector2(_positionB.X, _positionB.Y);
             var transformB = new Transform(translationB, 0);
-            _isCollide = Collision.Detect(_colliderA, transformA, _colliderB, transformB);
+            _isCollide = Collision.DetectPriori(_colliderA, transformA, _movementA, _colliderB, transformB, _movementB);
 
             base.Update(gameTime);
         }
@@ -120,23 +136,24 @@ namespace MonoGameExample
 
             // TODO: Add your drawing code here
             _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+            
 
             DrawUI(gameTime);
 
             // A
             var translationA = new SystemVector2(_positionA.X, _positionA.Y);
             var transformA = new Transform(translationA, 0);
-            DrawCollider(_colliderA, transformA, ColorA);
+            DrawCollider(_colliderA, transformA, _movementA.ToXnaVector2(), _ratio, ColorA);
 
             // B
             var translationB = new SystemVector2(_positionB.X, _positionB.Y);
             var transformB = new Transform(translationB, 0);
-            DrawCollider(_colliderB, transformB, ColorB);
+            DrawCollider(_colliderB, transformB, _movementB.ToXnaVector2(), _ratio, ColorB);
 
             // B-A
             var bSubAOrigin = _logicalSize.ToVector2() * 2 / 3;
-            DrawMinkowskiDifference(_colliderA, transformA, _colliderB, transformB, bSubAOrigin,
-                _isCollide ? ColorCollision : ColorBSubA);
+            DrawMinkowskiDifference(_colliderA, transformA, _colliderB, transformB, _movementA - _movementB,
+                bSubAOrigin, _isCollide ? ColorCollision : ColorBSubA);
 
             // Debug draws
             for (var i = 0; i < _debugLines.Count; i += 2)
@@ -169,7 +186,7 @@ namespace MonoGameExample
         private ReadOnlyMemory<SystemVector2> _sampleNormals;
         private const int SampleRate = 128;
 
-        private void DrawCollider(ICollider collider, Transform transform, Color color)
+        private void DrawCollider(ICollider collider, Transform transform, Vector2 offset, Color color)
         {
             Span<Vector2> samplePoints = stackalloc Vector2[_sampleNormals.Length];
 
@@ -177,11 +194,20 @@ namespace MonoGameExample
             for (var i = 0; i < samples.Length; i += 1)
             {
                 var support = collider.WorldSupport(transform, samples[i]);
-                var worldPosition = new Vector2(support.X, support.Y);
+                var worldPosition = new Vector2(support.X, support.Y) + offset;
                 samplePoints[i] = worldPosition;
             }
 
             DrawShapeOfSamplePoints(samplePoints, color);
+        }
+
+        private void DrawCollider(ICollider collider, Transform transform, Vector2 movement, float ratio, Color color)
+        {
+            var offset = movement * ratio;
+            DrawCollider(collider, transform, offset, color);
+            var movementStart = new Vector2(transform.Translation.X, transform.Translation.Y);
+            var movementEnd = new Vector2(transform.Translation.X + movement.X, transform.Translation.Y + movement.Y);
+            _spriteBatch.DrawLine(movementStart, movementEnd, color);
         }
 
         private void DrawMinkowskiDifference(ICollider a, Transform ta, ICollider b, Transform tb, Vector2 originAt,
@@ -192,6 +218,21 @@ namespace MonoGameExample
             for (var i = 0; i < samples.Length; i += 1)
             {
                 var support = Collision.SupportOfMinkowskiDifference(a, ta, b, tb, samples[i]);
+                var worldPosition = new Vector2(support.X, support.Y) + originAt;
+                samplePoints[i] = worldPosition;
+            }
+
+            DrawShapeOfSamplePoints(samplePoints, color);
+        }
+
+        private void DrawMinkowskiDifference(ICollider a, Transform ta, ICollider b, Transform tb,
+            SystemVector2 relativeMovement, Vector2 originAt, Color color)
+        {
+            Span<Vector2> samplePoints = stackalloc Vector2[_sampleNormals.Length];
+            var samples = _sampleNormals.Span;
+            for (var i = 0; i < samples.Length; i += 1)
+            {
+                var support = Collision.SupportOfMinkowskiDifference(a, ta, b, tb, relativeMovement, samples[i]);
                 var worldPosition = new Vector2(support.X, support.Y) + originAt;
                 samplePoints[i] = worldPosition;
             }
@@ -277,10 +318,14 @@ namespace MonoGameExample
                 0,
                 Vector2.Zero, 2, SpriteEffects.None, 0);
 
-            var testSize = _defaultFont.MeasureString(asciiTestString);
-            _spriteBatch.DrawString(_defaultFont, asciiTestString, _logicalSize.ToVector2() - testSize * 2,
-                Color.LightGray, 0, Vector2.Zero, 2,
-                SpriteEffects.None, 0);
+            // var testSize = _defaultFont.MeasureString(asciiTestString);
+            // _spriteBatch.DrawString(_defaultFont, asciiTestString, _logicalSize.ToVector2() - testSize * 2,
+            //     Color.LightGray, 0, Vector2.Zero, 2,
+            //     SpriteEffects.None, 0);
+            const int ratioBarThickness = 10;
+            var barStart = new Vector2(0, _logicalSize.Y - ratioBarThickness);
+            var barEnd = new Vector2(_logicalSize.X * _ratio, _logicalSize.Y - ratioBarThickness);
+            _spriteBatch.DrawLine(barStart, barEnd, Color.LightGray, ratioBarThickness);
         }
 
         private List<Vector2> _debugPoints = new List<Vector2>();

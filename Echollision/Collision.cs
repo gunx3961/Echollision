@@ -6,7 +6,10 @@ namespace ViLAWAVE.Echollision
 {
     public static class Collision
     {
-        public static bool Detect(ICollider a, in Transform transformA, ICollider b, in Transform transformB)
+        public static bool Detect(
+            ICollider a, in Transform transformA,
+            ICollider b, in Transform transformB
+        )
         {
             DebugDraw.OnDrawString("origin", Vector2.Zero);
             DebugDraw.OnDrawPoint(Vector2.Zero);
@@ -73,9 +76,84 @@ namespace ViLAWAVE.Echollision
 
             return false;
         }
-        
+
+        public static bool DetectPriori(
+            ICollider a, in Transform transformA, Vector2 movementA,
+            ICollider b, in Transform transformB, Vector2 movementB
+        )
+        {
+            DebugDraw.OnDrawString("origin", Vector2.Zero);
+            DebugDraw.OnDrawPoint(Vector2.Zero);
+
+            // Treat collider A as the moving collider
+            var relativeMovement = movementA - movementB;
+            DebugDraw.OnDrawLine(Vector2.Zero, relativeMovement);
+            DebugDraw.OnDrawString("relative movement", relativeMovement);
+            var centerA = a.WorldCenter(transformA, relativeMovement);
+            var centerB = b.WorldCenter(transformB);
+            var v0 = centerB - centerA;
+            if (v0 == Vector2.Zero) v0 = new Vector2(0.00001f, 0);
+
+            DebugDraw.OnDrawString("v0", v0);
+            DebugDraw.OnDrawPoint(v0);
+            var normal = Vector2.Normalize(-v0);
+            DebugDraw.OnDrawString("origin ray", v0 + normal * 240);
+            DebugDraw.OnDrawLine(v0, v0 + normal * 240);
+
+            var v1 = SupportOfMinkowskiDifference(a, transformA, b, transformB, relativeMovement, normal);
+            DebugDraw.OnDrawString("v1", v1);
+            DebugDraw.OnDrawPoint(v1);
+            DebugDraw.OnDrawLine(v0, v1);
+            normal = Vector2.Normalize(v1 - v0);
+            normal = new Vector2(normal.Y, -normal.X);
+            if (Vector2.Dot(-v0, normal) < 0) normal = -normal;
+
+            var v2 = SupportOfMinkowskiDifference(a, transformA, b, transformB, relativeMovement, normal);
+            DebugDraw.OnDrawString("v2", v2);
+            DebugDraw.OnDrawPoint(v2);
+            DebugDraw.OnDrawLine(v0, v2);
+            DebugDraw.OnDrawLine(v1, v2);
+
+            var counter = MaxRefinement;
+            while (counter > 0)
+            {
+                normal = Vector2.Normalize(v2 - v1);
+                normal = new Vector2(normal.Y, -normal.X);
+                if (Vector2.Dot(normal, v0 - v1) > 0) normal = -normal; // Outer normal
+
+                var debugMidPoint = (v1 + v2) / 2;
+                DebugDraw.OnDrawLine(debugMidPoint, debugMidPoint + normal * 100);
+                DebugDraw.OnDrawString("n", debugMidPoint + normal * 100);
+
+                if (Vector2.Dot(normal, -v1) < 0) return true;
+
+                var v3 = SupportOfMinkowskiDifference(a, transformA, b, transformB, relativeMovement, normal);
+                DebugDraw.OnDrawLine(v0, v3);
+
+                if (Vector2.Dot(normal, v3) < 0) return false;
+
+                normal = Vector2.Normalize(v3 - v0);
+                normal = new Vector2(normal.Y, -normal.X);
+
+                if (Vector2.Dot(v2 - v1, normal) > 0 ^ Vector2.Dot(-v0, normal) > 0) // in v1 side
+                {
+                    v2 = v3;
+                    DebugDraw.OnDrawLine(v1, v3);
+                }
+                else
+                {
+                    v1 = v3;
+                    DebugDraw.OnDrawLine(v2, v3);
+                }
+
+                counter -= 1;
+            }
+
+            return false;
+        }
+
         private const int MaxRefinement = 5;
-        
+
         public static Vector2 WorldSupport(this ICollider shape, in Transform transform, Vector2 normal)
         {
             var rotation = Matrix3x2.CreateRotation(transform.Rotation);
@@ -86,18 +164,40 @@ namespace ViLAWAVE.Echollision
             return supportWorld;
         }
 
+        public static Vector2 WorldSupport(this ICollider shape, in Transform transform, Vector2 movement,
+            Vector2 normal)
+        {
+            var movementSupport = Vector2.Dot(movement, normal) > 0 ? movement : Vector2.Zero;
+            var shapeSupport = shape.WorldSupport(transform, normal);
+            return shapeSupport + movementSupport;
+        }
+
         public static Vector2 WorldCenter(this ICollider shape, in Transform transform)
         {
             var rotation = Matrix3x2.CreateRotation(transform.Rotation);
             return Vector2.Transform(shape.Center, rotation) + transform.Translation;
         }
+        public static Vector2 WorldCenter(this ICollider shape, in Transform transform, Vector2 movement)
+        {
+            return shape.WorldCenter(transform) + (movement / 2f);
+        }
 
-        public static Vector2 SupportOfMinkowskiDifference(ICollider a, in Transform ta, ICollider b, in Transform tb,
-            Vector2 normal)
+        public static Vector2 SupportOfMinkowskiDifference(
+            ICollider a, in Transform ta,
+            ICollider b, in Transform tb,
+            Vector2 normal
+        )
         {
             return b.WorldSupport(tb, normal) - a.WorldSupport(ta, -normal);
         }
 
-
+        public static Vector2 SupportOfMinkowskiDifference(
+            ICollider a, in Transform ta,
+            ICollider b, in Transform tb,
+            Vector2 relativeMovement, Vector2 normal
+        )
+        {
+            return b.WorldSupport(tb, normal) - a.WorldSupport(ta, relativeMovement, -normal);
+        }
     }
 }
