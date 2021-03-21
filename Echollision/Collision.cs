@@ -87,12 +87,11 @@ namespace ViLAWAVE.Echollision
 
             // Treat collider A as the moving collider
             var relativeMovement = movementA - movementB;
-            DebugDraw.OnDrawLine(Vector2.Zero, relativeMovement);
-            DebugDraw.OnDrawString("relative movement", relativeMovement);
             var centerA = a.WorldCenter(transformA, relativeMovement);
             var centerB = b.WorldCenter(transformB);
             var v0 = centerB - centerA;
             if (v0 == Vector2.Zero) v0 = new Vector2(0.00001f, 0);
+            DebugDraw.OnDrawMovement(v0 - relativeMovement / 2, v0 + relativeMovement / 2);
 
             DebugDraw.OnDrawString("v0", v0);
             DebugDraw.OnDrawPoint(v0);

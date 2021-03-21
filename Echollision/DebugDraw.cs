@@ -8,6 +8,7 @@ namespace ViLAWAVE.Echollision
         public static event Action<Vector2> DrawPoint = null!;
         public static event Action<Vector2, Vector2> DrawLine = null!;
         public static event Action<string, Vector2> DrawString = null!;
+        public static event Action<Vector2, Vector2> DrawMovement = null!;
 
         public static void OnDrawPoint(Vector2 point)
         {
@@ -23,5 +24,11 @@ namespace ViLAWAVE.Echollision
         {
             DrawString?.Invoke(text, position);
         }
+        
+        public static void OnDrawMovement(Vector2 start, Vector2 end)
+        {
+            DrawMovement?.Invoke(start, end);
+        }
+
     }
 }

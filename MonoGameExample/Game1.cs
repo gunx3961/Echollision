@@ -15,22 +15,54 @@ namespace MonoGameExample
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
         private readonly Color _bgColor = new Color(30, 30, 30);
-        private Point _logicalSize = new Point(1280, 720);
+        private Point _logicalSize = new Point(1680, 1000);
         private SpriteFont _defaultFont;
 
-        private Vector2 _positionA = new Vector2(400, 320);
-        private Vector2 _positionB = new Vector2(420, 250);
+        private enum ControlMode
+        {
+            None,
+            Position,
+            Movement,
+            Ratio
+        }
 
-        // new
+        private enum ColliderTarget
+        {
+            None,
+            A,
+            B
+        }
+
+        private ControlMode _controlMode = ControlMode.None;
+        private ColliderTarget _colliderTarget = ColliderTarget.None;
+        private Point _controlAnchor = Point.Zero;
+        private readonly ICollider _pointer = new SphereCollider(0);
         private bool _isCollide = false;
         private ICollider _colliderA;
         private ICollider _colliderB;
-        private SystemVector2 _movementA = new SystemVector2(100, 100);
-        private SystemVector2 _movementB = new SystemVector2(-160, 80);
+
+        // Position
+        private Vector2 _positionABase = new Vector2(400, 320);
+        private Vector2 _positionAControl = Vector2.Zero;
+        private Vector2 PositionA => _positionABase + _positionAControl;
+
+        private Vector2 _positionBBase = new Vector2(420, 250);
+        private Vector2 _positionBControl = Vector2.Zero;
+        private Vector2 PositionB => _positionBBase + _positionBControl;
+
+        // Movement
+        private Vector2 _movementA = new Vector2(100, 100);
+
+        private Vector2 _movementB = new Vector2(-160, 80);
+
+        // Ratio
         private float _ratioBase = 0f;
-        private Vector2 _ratioAdjustRelativePosition = Vector2.Zero;
-        private float _ratioAdjust = 0f;
-        private float _ratio => Math.Clamp(_ratioBase + _ratioAdjust, 0f, 1f);
+        private float _ratioControl = 0f;
+        private float Ratio => Math.Clamp(_ratioBase + _ratioControl, 0f, 1f);
+
+        private Transform TransformA => new Transform(PositionA.ToSystemVector2(), 0);
+        private Transform TransformB => new Transform(PositionB.ToSystemVector2(), 0);
+
 
         public Game1()
         {
@@ -87,6 +119,7 @@ namespace MonoGameExample
             DebugDraw.DrawPoint += HandleDrawDebugPoint;
             DebugDraw.DrawLine += HandleDrawDebugLine;
             DebugDraw.DrawString += HandleDrawDebugString;
+            DebugDraw.DrawMovement += HandleDrawDebugMovement;
         }
 
         protected override void Update(GameTime gameTime)
@@ -96,33 +129,84 @@ namespace MonoGameExample
                 Exit();
 
             var mouseState = MouseExtended.GetState();
-            if (mouseState.LeftButton == ButtonState.Pressed)
+            switch (_controlMode)
             {
-                _positionA = mouseState.Position.ToVector2();
-            }
-            
-            // Ratio control
-            if (mouseState.WasButtonJustDown(MouseButton.Right))
-            {
-                _ratioAdjustRelativePosition = mouseState.Position.ToVector2();
-            }
-            if (mouseState.RightButton == ButtonState.Pressed)
-            {
-                _ratioAdjust = (mouseState.Position.Y - _ratioAdjustRelativePosition.Y) * 2 / _logicalSize.Y;
-            }
-            if (mouseState.WasButtonJustUp(MouseButton.Right))
-            {
-                _ratioBase = _ratio;
-                _ratioAdjust = 0;
+                case ControlMode.None when mouseState.WasButtonJustDown(MouseButton.Left):
+                    _controlMode = ControlMode.Movement;
+                    _colliderTarget = DetermineTarget(mouseState.Position);
+                    _controlAnchor = mouseState.Position;
+                    break;
+                case ControlMode.None when mouseState.WasButtonJustDown(MouseButton.Middle):
+                    _controlMode = ControlMode.Position;
+                    _colliderTarget = DetermineTarget(mouseState.Position);
+                    _controlAnchor = mouseState.Position;
+                    break;
+                case ControlMode.None when mouseState.WasButtonJustDown(MouseButton.Right):
+                    _controlMode = ControlMode.Ratio;
+                    _controlAnchor = mouseState.Position;
+                    break;
+
+                case ControlMode.Movement when mouseState.WasButtonJustUp(MouseButton.Left):
+                case ControlMode.Position when mouseState.WasButtonJustUp(MouseButton.Middle):
+                case ControlMode.Ratio when mouseState.WasButtonJustUp(MouseButton.Right):
+                    _controlMode = ControlMode.None;
+                    _colliderTarget = ColliderTarget.None;
+                    _controlAnchor = Point.Zero;
+
+                    _positionABase = PositionA;
+                    _positionAControl = Vector2.Zero;
+                    _positionBBase = PositionB;
+                    _positionBControl = Vector2.Zero;
+
+                    _ratioBase = Ratio;
+                    _ratioControl = 0;
+
+                    break;
             }
 
-            var translationA = new SystemVector2(_positionA.X, _positionA.Y);
-            var transformA = new Transform(translationA, 0);
-            var translationB = new SystemVector2(_positionB.X, _positionB.Y);
-            var transformB = new Transform(translationB, 0);
-            _isCollide = Collision.DetectPriori(_colliderA, transformA, _movementA, _colliderB, transformB, _movementB);
+            var controlVector = (mouseState.Position - _controlAnchor).ToVector2();
+
+            switch (_controlMode)
+            {
+                case ControlMode.Movement when _colliderTarget == ColliderTarget.A:
+                    _movementA = controlVector;
+                    break;
+                case ControlMode.Movement when _colliderTarget == ColliderTarget.B:
+                    _movementB = controlVector;
+                    break;
+
+                case ControlMode.Position when _colliderTarget == ColliderTarget.A:
+                    _positionAControl = controlVector;
+                    break;
+                case ControlMode.Position when _colliderTarget == ColliderTarget.B:
+                    _positionBControl = controlVector;
+                    break;
+
+                case ControlMode.Ratio:
+                    _ratioControl = controlVector.Y * 2 / _logicalSize.Y;
+                    break;
+            }
+
+            _isCollide = Collision.DetectPriori(_colliderA, TransformA, _movementA.ToSystemVector2(), _colliderB,
+                TransformB, _movementB.ToSystemVector2());
 
             base.Update(gameTime);
+        }
+
+        private ColliderTarget DetermineTarget(Point mousePosition)
+        {
+            var mouseTransform = new Transform(mousePosition.ToVector2().ToSystemVector2(), 0);
+            if (Collision.Detect(_pointer, mouseTransform, _colliderA, TransformA))
+            {
+                return ColliderTarget.A;
+            }
+
+            if (Collision.Detect(_pointer, mouseTransform, _colliderB, TransformB))
+            {
+                return ColliderTarget.B;
+            }
+
+            return ColliderTarget.None;
         }
 
         private static readonly Color ColorA = Color.Aqua;
@@ -136,23 +220,24 @@ namespace MonoGameExample
 
             // TODO: Add your drawing code here
             _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
-            
+
 
             DrawUI(gameTime);
 
             // A
-            var translationA = new SystemVector2(_positionA.X, _positionA.Y);
+            var translationA = new SystemVector2(PositionA.X, PositionA.Y);
             var transformA = new Transform(translationA, 0);
-            DrawCollider(_colliderA, transformA, _movementA.ToXnaVector2(), _ratio, ColorA);
+            DrawCollider(_colliderA, transformA, _movementA, Ratio, ColorA);
 
             // B
-            var translationB = new SystemVector2(_positionB.X, _positionB.Y);
+            var translationB = new SystemVector2(PositionB.X, PositionB.Y);
             var transformB = new Transform(translationB, 0);
-            DrawCollider(_colliderB, transformB, _movementB.ToXnaVector2(), _ratio, ColorB);
+            DrawCollider(_colliderB, transformB, _movementB, Ratio, ColorB);
 
             // B-A
-            var bSubAOrigin = _logicalSize.ToVector2() * 2 / 3;
-            DrawMinkowskiDifference(_colliderA, transformA, _colliderB, transformB, _movementA - _movementB,
+            var bSubAOrigin = _logicalSize.ToVector2() / 2;
+            DrawMinkowskiDifference(_colliderA, transformA, _colliderB, transformB,
+                (_movementA - _movementB).ToSystemVector2(),
                 bSubAOrigin, _isCollide ? ColorCollision : ColorBSubA);
 
             // Debug draws
@@ -324,7 +409,7 @@ namespace MonoGameExample
             //     SpriteEffects.None, 0);
             const int ratioBarThickness = 10;
             var barStart = new Vector2(0, _logicalSize.Y - ratioBarThickness);
-            var barEnd = new Vector2(_logicalSize.X * _ratio, _logicalSize.Y - ratioBarThickness);
+            var barEnd = new Vector2(_logicalSize.X * Ratio, _logicalSize.Y - ratioBarThickness);
             _spriteBatch.DrawLine(barStart, barEnd, Color.LightGray, ratioBarThickness);
         }
 
@@ -346,6 +431,14 @@ namespace MonoGameExample
         private void HandleDrawDebugString(string text, SystemVector2 position)
         {
             _debugStrings.Add(new Tuple<string, Vector2>(text, new Vector2(position.X, position.Y)));
+        }
+
+        private void HandleDrawDebugMovement(SystemVector2 start, SystemVector2 end)
+        {
+            var ratioPoint = start + (end - start) * Ratio;
+            _debugLines.Add(new Vector2(start.X, start.Y));
+            _debugLines.Add(new Vector2(end.X, end.Y));
+            _debugPoints.Add(ratioPoint.ToXnaVector2());
         }
     }
 }
