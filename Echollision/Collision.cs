@@ -6,6 +6,62 @@ namespace ViLAWAVE.Echollision
 {
     public static class Collision
     {
+        private const float Epsilon = 0.001f;
+
+        public static bool DetectGJK(
+            ICollider a, in Transform transformA,
+            ICollider b, in Transform transformB
+        )
+        {
+            var k = 0;
+            var centerA = a.WorldCenter(transformA);
+            var centerB = b.WorldCenter(transformB);
+            var v = centerB - centerA;
+            if (v == Vector2.Zero) v = new Vector2(0.00001f, 0);
+            Span<Vector2> tau = stackalloc Vector2[3]; // 
+            Span<Vector2> w = stackalloc Vector2[3]; // Support point candidates
+
+            while (k < 10)
+            {
+                k += 1;
+                w[k] = SupportOfMinkowskiDifference(a, transformA, b, transformB, v);
+
+                var vkLengthSquared = v.LengthSquared();
+                vkLengthSquared - Vector2.Dot(v, w[k]) <= Epsilon * Epsilon * vkLengthSquared;
+            }
+
+            return false;
+        }
+
+        private static bool IsSameSign(float a, float b)
+        {
+            return a * b > 0;
+        }
+
+        private static ref readonly BarycentricTuples<Vector2> S2D(Vector2 s1, Vector2 s2, Vector2 s3)
+        {
+            var cofactor31 = (s2.X * s3.Y) - (s3.X * s2.Y);
+            var cofactor32 = (s3.X * s1.Y) - (s1.X * s3.Y);
+            var cofactor33 = (s1.X * s2.Y) - (s2.X * s1.Y);
+            var detM = cofactor31 + cofactor32 + cofactor33;
+
+            if (IsSameSign(detM, cofactor31) && IsSameSign(detM, cofactor32) && IsSameSign(detM, cofactor33))
+            {
+                // Origin is inside the 2-simplex 
+                var lambda1 = cofactor31 / detM;
+                var lambda2 = cofactor32 / detM;
+                var lambda3 = cofactor33 / detM;
+
+                var result = new BarycentricTuples<Vector2>(
+                    stackalloc Vector2[] {s1, s2, s3},
+                    stackalloc float[] {lambda1, lambda2, lambda3}
+                );
+
+                return ref result;
+            }
+            // var detM = 
+        }
+
         public static bool Detect(
             ICollider a, in Transform transformA,
             ICollider b, in Transform transformB
@@ -176,6 +232,7 @@ namespace ViLAWAVE.Echollision
             var rotation = Matrix3x2.CreateRotation(transform.Rotation);
             return Vector2.Transform(shape.Center, rotation) + transform.Translation;
         }
+
         public static Vector2 WorldCenter(this ICollider shape, in Transform transform, Vector2 movement)
         {
             return shape.WorldCenter(transform) + (movement / 2f);
