@@ -22,12 +22,12 @@ namespace ViLAWAVE.Echollision.Collider
             }
         }
 
-        public Vector2 Support(Vector2 normal)
+        public Vector2 Support(Vector2 direction)
         {
-            var support = _shapes[0].Support(normal);
+            var support = _shapes[0].Support(direction);
             for (var i = 1; i < _shapes.Length; i += 1)
             {
-                support += _shapes[i].Support(normal);
+                support += _shapes[i].Support(direction);
             }
             return support;
         }

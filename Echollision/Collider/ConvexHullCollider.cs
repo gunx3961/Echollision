@@ -23,15 +23,15 @@ namespace ViLAWAVE.Echollision.Collider
             }
         }
         
-        public Vector2 Support(Vector2 normal)
+        public Vector2 Support(Vector2 direction)
         {
-            var support = _shapes[0].Support(normal);
+            var support = _shapes[0].Support(direction);
             var max = support;
 
             for (var i = 1; i < _shapes.Length; i += 1)
             {
-                support = _shapes[i].Support(normal);
-                if (Vector2.Dot(normal, support - max) > 0) max = support;
+                support = _shapes[i].Support(direction);
+                if (Vector2.Dot(direction, support - max) > 0) max = support;
             }
 
             return max;

@@ -11,8 +11,8 @@ namespace ViLAWAVE.Echollision.Collider
         /// <summary>
         /// Get support point of normal direction in collider coordinate.
         /// </summary>
-        /// <param name="normal">Support direction in collider coordinate.</param>
+        /// <param name="direction">Direction in collider coordinate.</param>
         /// <returns></returns>
-        Vector2 Support(Vector2 normal);
+        Vector2 Support(Vector2 direction);
     }
 }

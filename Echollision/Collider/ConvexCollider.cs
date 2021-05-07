@@ -23,7 +23,7 @@ namespace ViLAWAVE.Echollision.Collider
             }
         }
 
-        public Vector2 Support(Vector2 normal)
+        public Vector2 Support(Vector2 direction)
         {
             var support = _vertices[0];
             var max = support;
@@ -31,7 +31,7 @@ namespace ViLAWAVE.Echollision.Collider
             for (var i = 1; i < _vertices.Length; i += 1)
             {
                 support = _vertices[i];
-                if (Vector2.Dot(normal, support - max) > 0) max = support;
+                if (Vector2.Dot(direction, support - max) > 0) max = support;
             }
 
             return max;

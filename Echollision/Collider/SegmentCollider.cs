@@ -17,9 +17,9 @@ namespace ViLAWAVE.Echollision.Collider
 
         public Vector2 Center => (_a + _b) / 2f;
 
-        public Vector2 Support(Vector2 normal)
+        public Vector2 Support(Vector2 direction)
         {
-            return Vector2.Dot(_b - _a, normal) > 0 ? _b : _a;
+            return Vector2.Dot(_b - _a, direction) > 0 ? _b : _a;
         }
 
         private readonly Vector2 _a;

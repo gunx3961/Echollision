@@ -6,31 +6,79 @@ namespace ViLAWAVE.Echollision
 {
     public static class Collision
     {
-        private const float Epsilon = 0.001f;
+        private const float Tolerance = 0.001f;
+        private const float MachineEpsilon = 0.00000001f;
 
-        public static bool DetectGJK(
+        public static float DetectGjk(
             ICollider a, in Transform transformA,
             ICollider b, in Transform transformB
         )
         {
             var k = 0;
-            var centerA = a.WorldCenter(transformA);
-            var centerB = b.WorldCenter(transformB);
-            var v = centerB - centerA;
-            if (v == Vector2.Zero) v = new Vector2(0.00001f, 0);
-            Span<Vector2> tau = stackalloc Vector2[3]; // 
-            Span<Vector2> w = stackalloc Vector2[3]; // Support point candidates
 
-            while (k < 10)
+            // Pick y axis unit vector as v0 
+            var v = Vector2.UnitY;
+            Span<Vector2> tau = stackalloc Vector2[3];
+            Span<float> lambda = stackalloc float[3];
+            var vertexCount = 0;
+            var terminationFactor = 0f;
+
+            do
             {
                 k += 1;
-                w[k] = SupportOfMinkowskiDifference(a, transformA, b, transformB, v);
+                var wk = SupportOfMinkowskiDifference(a, transformA, b, transformB, -v);
+                int i;
+                var isIncluded = false;
+                for (i = 0; i < vertexCount; i++)
+                {
+                    if (wk != tau[i]) continue;
+                    isIncluded = true;
+                    break;
+                }
+                if (isIncluded) continue;
 
                 var vkLengthSquared = v.LengthSquared();
-                vkLengthSquared - Vector2.Dot(v, w[k]) <= Epsilon * Epsilon * vkLengthSquared;
-            }
+                if (vkLengthSquared - Vector2.Dot(v, wk) <= MachineEpsilon * vkLengthSquared) continue;
 
-            return false;
+                tau[vertexCount] = wk;
+                vertexCount += 1;
+
+                DistanceSv(ref tau, ref lambda, ref vertexCount);
+                v = Vector2.Zero;
+                for (i = 0; i < vertexCount; i++)
+                {
+                    v += lambda[i] * tau[i];
+                }
+
+                // Termination
+                var maxWLengthSquared = tau[0].LengthSquared();
+                for (i = 1; i < vertexCount; i++)
+                {
+                    var wls = tau[i].LengthSquared();
+                    if (wls > maxWLengthSquared) maxWLengthSquared = wls;
+                }
+
+                terminationFactor = Tolerance * maxWLengthSquared;
+            } while (vertexCount >= 3 || v.LengthSquared() <= terminationFactor);
+
+            return v.Length();
+        }
+
+        private static void DistanceSv(ref Span<Vector2> tau, ref Span<float> lambda, ref int vertexCount)
+        {
+            switch (vertexCount)
+            {
+                case 3:
+                    S2D(ref tau, ref lambda, ref vertexCount);
+                    break;
+                case 2:
+                    S1DMyVersion(ref tau, ref lambda, ref vertexCount);
+                    break;
+                case 1:
+                    lambda[0] = 1;
+                    vertexCount = 1;
+                    break;
+            }
         }
 
         private static bool IsSameSign(float a, float b)
@@ -38,28 +86,116 @@ namespace ViLAWAVE.Echollision
             return a * b > 0;
         }
 
-        private static ref readonly BarycentricTuples<Vector2> S2D(Vector2 s1, Vector2 s2, Vector2 s3)
+        private static void S2D(ref Span<Vector2> w, ref Span<float> lambda, ref int vertexCount)
         {
+            var s1 = w[0];
+            var s2 = w[1];
+            var s3 = w[2];
+
             var cofactor31 = (s2.X * s3.Y) - (s3.X * s2.Y);
             var cofactor32 = (s3.X * s1.Y) - (s1.X * s3.Y);
             var cofactor33 = (s1.X * s2.Y) - (s2.X * s1.Y);
             var detM = cofactor31 + cofactor32 + cofactor33;
 
-            if (IsSameSign(detM, cofactor31) && IsSameSign(detM, cofactor32) && IsSameSign(detM, cofactor33))
+            var flag = 0b000;
+            if (IsSameSign(detM, cofactor31)) flag |= 0b100;
+            if (IsSameSign(detM, cofactor32)) flag |= 0b010;
+            if (IsSameSign(detM, cofactor33)) flag |= 0b001;
+
+
+            switch (flag)
             {
-                // Origin is inside the 2-simplex 
-                var lambda1 = cofactor31 / detM;
-                var lambda2 = cofactor32 / detM;
-                var lambda3 = cofactor33 / detM;
+                case 0b111:
+                    // Origin is inside the 2-simplex 
+                    lambda[0] = cofactor31 / detM;
+                    lambda[1] = cofactor32 / detM;
+                    lambda[2] = cofactor33 / detM;
+                    vertexCount = 3;
+                    break;
 
-                var result = new BarycentricTuples<Vector2>(
-                    stackalloc Vector2[] {s1, s2, s3},
-                    stackalloc float[] {lambda1, lambda2, lambda3}
-                );
+                case 0b100:
+                    w[0] = s1;
+                    lambda[0] = 1f;
+                    vertexCount = 1;
+                    break;
+                case 0b010:
+                    w[0] = s2;
+                    lambda[0] = 1f;
+                    vertexCount = 1;
+                    break;
+                case 0b001:
+                    w[0] = s3;
+                    lambda[0] = 1f;
+                    vertexCount = 1;
+                    break;
 
-                return ref result;
+                case 0b110:
+                    w[0] = s1;
+                    w[1] = s2;
+                    S1DMyVersion(ref w, ref lambda, ref vertexCount);
+                    break;
+                case 0b101:
+                    w[0] = s1;
+                    w[1] = s3;
+                    S1DMyVersion(ref w, ref lambda, ref vertexCount);
+                    break;
+                case 0b011:
+                    w[0] = s2;
+                    w[1] = s3;
+                    S1DMyVersion(ref w, ref lambda, ref vertexCount);
+                    break;
             }
-            // var detM = 
+        }
+
+        private static void S1DMyVersion(ref Span<Vector2> w, ref Span<float> lambda, ref int vertexCount)
+        {
+            var s1 = w[0];
+            var s2 = w[1];
+
+            var t = s2 - s1;
+            var po = Vector2.Dot(-s1, t) / t.LengthSquared() * t + s1;
+
+
+            Span<float> s1Components = stackalloc float[] {s1.X, s1.Y};
+            Span<float> s2Components = stackalloc float[] {s2.X, s2.Y};
+            Span<float> poComponents = stackalloc float[] {po.X, po.Y};
+            var s2S1 = s1 - s2;
+            var componentIndex = 0;
+            var miuMax = s2S1.X;
+            if (Math.Abs(s2S1.Y) > Math.Abs(s2S1.X))
+            {
+                componentIndex = 1;
+                miuMax = s2S1.Y;
+            }
+
+            var cofactor1 = poComponents[componentIndex] - s2Components[componentIndex];
+            var cofactor2 = s1Components[componentIndex] - poComponents[componentIndex];
+
+            // ----*-----*-----*----
+            //     po    s2    s1
+            if (!IsSameSign(miuMax, cofactor1))
+            {
+                w[0] = s2;
+                lambda[0] = 1f;
+                vertexCount = 1;
+                return;
+            }
+
+            // ----*-----*-----*----
+            //     po    s1    s2
+            if (!IsSameSign(miuMax, cofactor2))
+            {
+                w[0] = s1;
+                lambda[0] = 1f;
+                vertexCount = 1;
+                return;
+            }
+
+            // ----*-----*-----*----
+            //     s1    po    s2
+            lambda[0] = cofactor1 / miuMax;
+            lambda[1] = cofactor2 / miuMax;
+            vertexCount = 2;
         }
 
         public static bool Detect(

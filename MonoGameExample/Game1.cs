@@ -38,6 +38,7 @@ namespace MonoGameExample
         private Point _controlAnchor = Point.Zero;
         private readonly ICollider _pointer = new SphereCollider(0);
         private bool _isCollide = false;
+        private float _distance = 0f;
         private ICollider _colliderA;
         private ICollider _colliderB;
 
@@ -190,6 +191,8 @@ namespace MonoGameExample
             _isCollide = Collision.DetectPriori(_colliderA, TransformA, _movementA.ToSystemVector2(), _colliderB,
                 TransformB, _movementB.ToSystemVector2());
 
+            _distance = Collision.DetectGjk(_colliderA, TransformA, _colliderB, TransformB);
+
             base.Update(gameTime);
         }
 
@@ -239,6 +242,10 @@ namespace MonoGameExample
             DrawMinkowskiDifference(_colliderA, transformA, _colliderB, transformB,
                 (_movementA - _movementB).ToSystemVector2(),
                 bSubAOrigin, _isCollide ? ColorCollision : ColorBSubA);
+
+            // Distance
+            _spriteBatch.DrawString(_defaultFont, _distance.ToString(), new Vector2(16, _logicalSize.Y - 32), Color.White,
+                0, Vector2.Zero, 4, SpriteEffects.None, 0);
 
             // Debug draws
             for (var i = 0; i < _debugLines.Count; i += 2)
