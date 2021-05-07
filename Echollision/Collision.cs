@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Numerics;
 using ViLAWAVE.Echollision.Collider;
 
@@ -6,8 +7,8 @@ namespace ViLAWAVE.Echollision
 {
     public static class Collision
     {
-        private const float Tolerance = 0.001f;
-        private const float MachineEpsilon = 0.00000001f;
+        private const float Tolerance = Single.Epsilon * 100; // [van der Bergen 2003] P.143
+        private const float RelativeErrorTolerance = 1e-8f;
 
         public static float DetectGjk(
             ICollider a, in Transform transformA,
@@ -15,32 +16,38 @@ namespace ViLAWAVE.Echollision
         )
         {
             var k = 0;
+            DebugDraw.OnDrawString("origin", Vector2.Zero);
+            DebugDraw.OnDrawPoint(Vector2.Zero);
+            // Pick arbitrary support point as initial v
+            var v = SupportOfMinkowskiDifference(a, transformA, b, transformB, Vector2.UnitX);
 
-            // Pick y axis unit vector as v0 
-            var v = Vector2.UnitY;
             Span<Vector2> tau = stackalloc Vector2[3];
             Span<float> lambda = stackalloc float[3];
             var vertexCount = 0;
-            var terminationFactor = 0f;
 
-            do
+            while (k < 10)
             {
                 k += 1;
-                var wk = SupportOfMinkowskiDifference(a, transformA, b, transformB, -v);
+                var negativeVDirection = Vector2.Normalize(-v) * 100;
+                DebugDraw.OnDrawLine(Vector2.Zero, negativeVDirection);
+                DebugDraw.OnDrawString($"-v{(k - 1).ToString()}", negativeVDirection);
+                var w = SupportOfMinkowskiDifference(a, transformA, b, transformB, -v);
+                DebugDraw.OnDrawPoint(w);
+                DebugDraw.OnDrawString($"w{(k - 1).ToString()}", w);
                 int i;
-                var isIncluded = false;
                 for (i = 0; i < vertexCount; i++)
                 {
-                    if (wk != tau[i]) continue;
-                    isIncluded = true;
-                    break;
+                    if ((w - tau[i]).LengthSquared() < RelativeErrorTolerance) return v.Length();
+                    // if (w == tau[i]) return v.Length();
                 }
-                if (isIncluded) continue;
 
                 var vkLengthSquared = v.LengthSquared();
-                if (vkLengthSquared - Vector2.Dot(v, wk) <= MachineEpsilon * vkLengthSquared) continue;
+                if (vkLengthSquared - Vector2.Dot(v, w) <= RelativeErrorTolerance * vkLengthSquared)
+                {
+                    return v.Length();
+                }
 
-                tau[vertexCount] = wk;
+                tau[vertexCount] = w;
                 vertexCount += 1;
 
                 DistanceSv(ref tau, ref lambda, ref vertexCount);
@@ -49,6 +56,8 @@ namespace ViLAWAVE.Echollision
                 {
                     v += lambda[i] * tau[i];
                 }
+                DebugDraw.OnDrawPoint(v);
+                DebugDraw.OnDrawString($"v{k}", v);
 
                 // Termination
                 var maxWLengthSquared = tau[0].LengthSquared();
@@ -57,9 +66,14 @@ namespace ViLAWAVE.Echollision
                     var wls = tau[i].LengthSquared();
                     if (wls > maxWLengthSquared) maxWLengthSquared = wls;
                 }
+                if (vertexCount >= 3 || vkLengthSquared <= Tolerance * maxWLengthSquared)
+                {
+                    // We regard v as zero
+                    return 0f;
+                }
 
-                terminationFactor = Tolerance * maxWLengthSquared;
-            } while (vertexCount >= 3 || v.LengthSquared() <= terminationFactor);
+                if (v == Vector2.Zero) return 0f;
+            }
 
             return v.Length();
         }
@@ -144,6 +158,10 @@ namespace ViLAWAVE.Echollision
                     w[1] = s3;
                     S1DMyVersion(ref w, ref lambda, ref vertexCount);
                     break;
+                
+                default:
+                    Debugger.Break();
+                    throw new ApplicationException("Assertion Error");
             }
         }
 
@@ -203,33 +221,33 @@ namespace ViLAWAVE.Echollision
             ICollider b, in Transform transformB
         )
         {
-            DebugDraw.OnDrawString("origin", Vector2.Zero);
-            DebugDraw.OnDrawPoint(Vector2.Zero);
+            // DebugDraw.OnDrawString("origin", Vector2.Zero);
+            // DebugDraw.OnDrawPoint(Vector2.Zero);
 
             var centerA = a.WorldCenter(transformA);
             var centerB = b.WorldCenter(transformB);
             var v0 = centerB - centerA;
             if (v0 == Vector2.Zero) v0 = new Vector2(0.00001f, 0);
 
-            DebugDraw.OnDrawString("v0", v0);
-            DebugDraw.OnDrawPoint(v0);
+            // DebugDraw.OnDrawString("v0", v0);
+            // DebugDraw.OnDrawPoint(v0);
             var normal = Vector2.Normalize(-v0);
-            DebugDraw.OnDrawString("origin ray", v0 + normal * 240);
-            DebugDraw.OnDrawLine(v0, v0 + normal * 240);
+            // DebugDraw.OnDrawString("origin ray", v0 + normal * 240);
+            // DebugDraw.OnDrawLine(v0, v0 + normal * 240);
 
             var v1 = SupportOfMinkowskiDifference(a, transformA, b, transformB, normal);
-            DebugDraw.OnDrawString("v1", v1);
-            DebugDraw.OnDrawPoint(v1);
-            DebugDraw.OnDrawLine(v0, v1);
+            // DebugDraw.OnDrawString("v1", v1);
+            // DebugDraw.OnDrawPoint(v1);
+            // DebugDraw.OnDrawLine(v0, v1);
             normal = Vector2.Normalize(v1 - v0);
             normal = new Vector2(normal.Y, -normal.X);
             if (Vector2.Dot(-v0, normal) < 0) normal = -normal;
 
             var v2 = SupportOfMinkowskiDifference(a, transformA, b, transformB, normal);
-            DebugDraw.OnDrawString("v2", v2);
-            DebugDraw.OnDrawPoint(v2);
-            DebugDraw.OnDrawLine(v0, v2);
-            DebugDraw.OnDrawLine(v1, v2);
+            // DebugDraw.OnDrawString("v2", v2);
+            // DebugDraw.OnDrawPoint(v2);
+            // DebugDraw.OnDrawLine(v0, v2);
+            // DebugDraw.OnDrawLine(v1, v2);
 
             var counter = MaxRefinement;
             while (counter > 0)
@@ -239,13 +257,13 @@ namespace ViLAWAVE.Echollision
                 if (Vector2.Dot(normal, v0 - v1) > 0) normal = -normal; // Outer normal
 
                 var debugMidPoint = (v1 + v2) / 2;
-                DebugDraw.OnDrawLine(debugMidPoint, debugMidPoint + normal * 100);
-                DebugDraw.OnDrawString("n", debugMidPoint + normal * 100);
+                // DebugDraw.OnDrawLine(debugMidPoint, debugMidPoint + normal * 100);
+                // DebugDraw.OnDrawString("n", debugMidPoint + normal * 100);
 
                 if (Vector2.Dot(normal, -v1) < 0) return true;
 
                 var v3 = SupportOfMinkowskiDifference(a, transformA, b, transformB, normal);
-                DebugDraw.OnDrawLine(v0, v3);
+                // DebugDraw.OnDrawLine(v0, v3);
 
                 if (Vector2.Dot(normal, v3) < 0) return false;
 
@@ -255,12 +273,12 @@ namespace ViLAWAVE.Echollision
                 if (Vector2.Dot(v2 - v1, normal) > 0 ^ Vector2.Dot(-v0, normal) > 0) // in v1 side
                 {
                     v2 = v3;
-                    DebugDraw.OnDrawLine(v1, v3);
+                    // DebugDraw.OnDrawLine(v1, v3);
                 }
                 else
                 {
                     v1 = v3;
-                    DebugDraw.OnDrawLine(v2, v3);
+                    // DebugDraw.OnDrawLine(v2, v3);
                 }
 
                 counter -= 1;
@@ -274,8 +292,8 @@ namespace ViLAWAVE.Echollision
             ICollider b, in Transform transformB, Vector2 movementB
         )
         {
-            DebugDraw.OnDrawString("origin", Vector2.Zero);
-            DebugDraw.OnDrawPoint(Vector2.Zero);
+            // DebugDraw.OnDrawString("origin", Vector2.Zero);
+            // DebugDraw.OnDrawPoint(Vector2.Zero);
 
             // Treat collider A as the moving collider
             var relativeMovement = movementA - movementB;
@@ -283,27 +301,27 @@ namespace ViLAWAVE.Echollision
             var centerB = b.WorldCenter(transformB);
             var v0 = centerB - centerA;
             if (v0 == Vector2.Zero) v0 = new Vector2(0.00001f, 0);
-            DebugDraw.OnDrawMovement(v0 - relativeMovement / 2, v0 + relativeMovement / 2);
-
-            DebugDraw.OnDrawString("v0", v0);
-            DebugDraw.OnDrawPoint(v0);
+            // DebugDraw.OnDrawMovement(v0 - relativeMovement / 2, v0 + relativeMovement / 2);
+            //
+            // DebugDraw.OnDrawString("v0", v0);
+            // DebugDraw.OnDrawPoint(v0);
             var normal = Vector2.Normalize(-v0);
-            DebugDraw.OnDrawString("origin ray", v0 + normal * 240);
-            DebugDraw.OnDrawLine(v0, v0 + normal * 240);
+            // DebugDraw.OnDrawString("origin ray", v0 + normal * 240);
+            // DebugDraw.OnDrawLine(v0, v0 + normal * 240);
 
             var v1 = SupportOfMinkowskiDifference(a, transformA, b, transformB, relativeMovement, normal);
-            DebugDraw.OnDrawString("v1", v1);
-            DebugDraw.OnDrawPoint(v1);
-            DebugDraw.OnDrawLine(v0, v1);
+            // DebugDraw.OnDrawString("v1", v1);
+            // DebugDraw.OnDrawPoint(v1);
+            // DebugDraw.OnDrawLine(v0, v1);
             normal = Vector2.Normalize(v1 - v0);
             normal = new Vector2(normal.Y, -normal.X);
             if (Vector2.Dot(-v0, normal) < 0) normal = -normal;
 
             var v2 = SupportOfMinkowskiDifference(a, transformA, b, transformB, relativeMovement, normal);
-            DebugDraw.OnDrawString("v2", v2);
-            DebugDraw.OnDrawPoint(v2);
-            DebugDraw.OnDrawLine(v0, v2);
-            DebugDraw.OnDrawLine(v1, v2);
+            // DebugDraw.OnDrawString("v2", v2);
+            // DebugDraw.OnDrawPoint(v2);
+            // DebugDraw.OnDrawLine(v0, v2);
+            // DebugDraw.OnDrawLine(v1, v2);
 
             var counter = MaxRefinement;
             while (counter > 0)
@@ -313,13 +331,13 @@ namespace ViLAWAVE.Echollision
                 if (Vector2.Dot(normal, v0 - v1) > 0) normal = -normal; // Outer normal
 
                 var debugMidPoint = (v1 + v2) / 2;
-                DebugDraw.OnDrawLine(debugMidPoint, debugMidPoint + normal * 100);
-                DebugDraw.OnDrawString("n", debugMidPoint + normal * 100);
+                // DebugDraw.OnDrawLine(debugMidPoint, debugMidPoint + normal * 100);
+                // DebugDraw.OnDrawString("n", debugMidPoint + normal * 100);
 
                 if (Vector2.Dot(normal, -v1) < 0) return true;
 
                 var v3 = SupportOfMinkowskiDifference(a, transformA, b, transformB, relativeMovement, normal);
-                DebugDraw.OnDrawLine(v0, v3);
+                // DebugDraw.OnDrawLine(v0, v3);
 
                 if (Vector2.Dot(normal, v3) < 0) return false;
 
@@ -329,12 +347,12 @@ namespace ViLAWAVE.Echollision
                 if (Vector2.Dot(v2 - v1, normal) > 0 ^ Vector2.Dot(-v0, normal) > 0) // in v1 side
                 {
                     v2 = v3;
-                    DebugDraw.OnDrawLine(v1, v3);
+                    // DebugDraw.OnDrawLine(v1, v3);
                 }
                 else
                 {
                     v1 = v3;
-                    DebugDraw.OnDrawLine(v2, v3);
+                    // DebugDraw.OnDrawLine(v2, v3);
                 }
 
                 counter -= 1;

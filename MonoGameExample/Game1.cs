@@ -52,9 +52,9 @@ namespace MonoGameExample
         private Vector2 PositionB => _positionBBase + _positionBControl;
 
         // Movement
-        private Vector2 _movementA = new Vector2(100, 100);
+        private Vector2 _movementA = new Vector2(0, 0);
 
-        private Vector2 _movementB = new Vector2(-160, 80);
+        private Vector2 _movementB = new Vector2(0, 0);
 
         // Ratio
         private float _ratioBase = 0f;
@@ -96,13 +96,14 @@ namespace MonoGameExample
             _sampleNormals = normals;
 
             _colliderA = new SphereCollider(100);
-            _colliderB = new ConvexCollider(new SystemVector2[]
-            {
-                new SystemVector2(-100, -100),
-                new SystemVector2(100, -100),
-                new SystemVector2(100, 100),
-                new SystemVector2(-100, 100)
-            });
+            _colliderB = new SphereCollider(200);
+            // _colliderB = new ConvexCollider(new SystemVector2[]
+            // {
+            //     new SystemVector2(-100, -100),
+            //     new SystemVector2(100, -100),
+            //     new SystemVector2(100, 100),
+            //     new SystemVector2(-100, 100)
+            // });
 
             base.Initialize();
         }
