@@ -15,7 +15,7 @@ namespace MonoGameExample
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
         private readonly Color _bgColor = new Color(30, 30, 30);
-        private Point _logicalSize = new Point(1680, 1000);
+        private Point _logicalSize = new Point(1280, 720);
         private SpriteFont _defaultFont;
 
         private enum ControlMode
@@ -41,6 +41,7 @@ namespace MonoGameExample
         private float _distance = 0f;
         private ICollider _colliderA;
         private ICollider _colliderB;
+        private GameTime _lastDebugBaseTime = new GameTime();
 
         // Position
         private Vector2 _positionABase = new Vector2(400, 320);
@@ -117,11 +118,6 @@ namespace MonoGameExample
             _pixel = new Texture2D(_spriteBatch.GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
             _pixel.SetData(new[] {Color.White});
             _defaultFont = Content.Load<SpriteFont>("04B09");
-
-            DebugDraw.DrawPoint += HandleDrawDebugPoint;
-            DebugDraw.DrawLine += HandleDrawDebugLine;
-            DebugDraw.DrawString += HandleDrawDebugString;
-            DebugDraw.DrawMovement += HandleDrawDebugMovement;
         }
 
         protected override void Update(GameTime gameTime)
@@ -172,20 +168,25 @@ namespace MonoGameExample
             {
                 case ControlMode.Movement when _colliderTarget == ColliderTarget.A:
                     _movementA = controlVector;
+                    _lastDebugBaseTime = gameTime;
                     break;
                 case ControlMode.Movement when _colliderTarget == ColliderTarget.B:
                     _movementB = controlVector;
+                    _lastDebugBaseTime = gameTime;
                     break;
 
                 case ControlMode.Position when _colliderTarget == ColliderTarget.A:
                     _positionAControl = controlVector;
+                    _lastDebugBaseTime = gameTime;
                     break;
                 case ControlMode.Position when _colliderTarget == ColliderTarget.B:
                     _positionBControl = controlVector;
+                    _lastDebugBaseTime = gameTime;
                     break;
 
                 case ControlMode.Ratio:
                     _ratioControl = controlVector.Y * 2 / _logicalSize.Y;
+                    _lastDebugBaseTime = gameTime;
                     break;
             }
 
@@ -193,6 +194,7 @@ namespace MonoGameExample
                 TransformB, _movementB.ToSystemVector2());
 
             _distance = Collision.DetectGjk(_colliderA, TransformA, _colliderB, TransformB);
+            _lastDebugBaseTime = gameTime;
 
             base.Update(gameTime);
         }
@@ -217,7 +219,7 @@ namespace MonoGameExample
         private static readonly Color ColorB = Color.Orange;
         private static readonly Color ColorBSubA = Color.White;
         private static readonly Color ColorCollision = Color.Yellow;
-
+        
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(_bgColor);
@@ -237,39 +239,8 @@ namespace MonoGameExample
             var translationB = new SystemVector2(PositionB.X, PositionB.Y);
             var transformB = new Transform(translationB, 0);
             DrawCollider(_colliderB, transformB, _movementB, Ratio, ColorB);
-
-            // B-A
-            var bSubAOrigin = _logicalSize.ToVector2() / 2;
-            DrawMinkowskiDifference(_colliderA, transformA, _colliderB, transformB,
-                (_movementA - _movementB).ToSystemVector2(),
-                bSubAOrigin, _isCollide ? ColorCollision : ColorBSubA);
-
-            // Distance
-            _spriteBatch.DrawString(_defaultFont, _distance.ToString(), new Vector2(16, _logicalSize.Y - 32), Color.White,
-                0, Vector2.Zero, 4, SpriteEffects.None, 0);
-
-            // Debug draws
-            for (var i = 0; i < _debugLines.Count; i += 2)
-            {
-                _spriteBatch.DrawLine(_debugLines[i] + bSubAOrigin, _debugLines[i + 1] + bSubAOrigin, Color.Green);
-            }
-
-            _debugLines.Clear();
-
-            for (var i = 0; i < _debugPoints.Count; i += 1)
-            {
-                DrawCross(_debugPoints[i] + bSubAOrigin, Color.LightGreen);
-            }
-
-            _debugPoints.Clear();
-
-            for (var i = 0; i < _debugStrings.Count; i += 1)
-            {
-                _spriteBatch.DrawString(_defaultFont, _debugStrings[i].Item1,
-                    _debugStrings[i].Item2 + bSubAOrigin + new Vector2(2, 2), Color.LightGreen);
-            }
-
-            _debugStrings.Clear();
+            
+            DrawDebug(gameTime);
 
             _spriteBatch.End();
             base.Draw(gameTime);
@@ -420,33 +391,61 @@ namespace MonoGameExample
             var barEnd = new Vector2(_logicalSize.X * Ratio, _logicalSize.Y - ratioBarThickness);
             _spriteBatch.DrawLine(barStart, barEnd, Color.LightGray, ratioBarThickness);
         }
+        
+        private Vector2 _minkowskiDifferenceOrigin => _logicalSize.ToVector2() / 2;
 
-        private List<Vector2> _debugPoints = new List<Vector2>();
-        private List<Vector2> _debugLines = new List<Vector2>();
-        private List<Tuple<string, Vector2>> _debugStrings = new List<Tuple<string, Vector2>>();
-
-        private void HandleDrawDebugPoint(SystemVector2 point)
+        private void DrawDebug(GameTime gameTime)
         {
-            _debugPoints.Add(new Vector2(point.X, point.Y));
-        }
+            var timeStep = (int)((gameTime.TotalGameTime - _lastDebugBaseTime.TotalGameTime).TotalSeconds / 0.5);
+            
+            // B-A
+            var bSubAOrigin = _minkowskiDifferenceOrigin;
+            DrawMinkowskiDifference(_colliderA, TransformA, _colliderB, TransformB,
+                (_movementA - _movementB).ToSystemVector2(),
+                bSubAOrigin, _isCollide ? ColorCollision : ColorBSubA);
 
-        private void HandleDrawDebugLine(SystemVector2 start, SystemVector2 end)
-        {
-            _debugLines.Add(new Vector2(start.X, start.Y));
-            _debugLines.Add(new Vector2(end.X, end.Y));
-        }
+            // Distance
+            _spriteBatch.DrawString(_defaultFont, _distance.ToString(), new Vector2(16, _logicalSize.Y - 32), Color.White,
+                0, Vector2.Zero, 4, SpriteEffects.None, 0);
+            
+            // Debug draws
+            for (var i = 0; i < DebugDraw.DebugLines.Count; i += 2)
+            {
+                _spriteBatch.DrawLine(DebugDraw.DebugLines[i].ToXnaVector2() + bSubAOrigin, DebugDraw.DebugLines[i + 1].ToXnaVector2() + bSubAOrigin, Color.Green);
+            }
 
-        private void HandleDrawDebugString(string text, SystemVector2 position)
-        {
-            _debugStrings.Add(new Tuple<string, Vector2>(text, new Vector2(position.X, position.Y)));
-        }
+            for (var i = 0; i < DebugDraw.DebugPoints.Count; i += 1)
+            {
+                DrawCross(DebugDraw.DebugPoints[i].ToXnaVector2() + bSubAOrigin, Color.LightGreen);
+            }
 
-        private void HandleDrawDebugMovement(SystemVector2 start, SystemVector2 end)
-        {
-            var ratioPoint = start + (end - start) * Ratio;
-            _debugLines.Add(new Vector2(start.X, start.Y));
-            _debugLines.Add(new Vector2(end.X, end.Y));
-            _debugPoints.Add(ratioPoint.ToXnaVector2());
+
+            for (var i = 0; i < DebugDraw.DebugStrings.Count; i += 1)
+            {
+                _spriteBatch.DrawString(_defaultFont, DebugDraw.DebugStrings[i].Item1,
+                    DebugDraw.DebugStrings[i].Item2.ToXnaVector2() + bSubAOrigin + new Vector2(2, 2), Color.LightGreen);
+            }
+
+            if (DebugDraw.DebugSimplexes.Count == 0) return;
+            var simplexIndex = timeStep % DebugDraw.DebugSimplexes.Count;
+            var (simplexVertexCount, w) = DebugDraw.DebugSimplexes[simplexIndex];
+            switch (simplexVertexCount)
+            {
+                case 1:
+                    DrawCross(w[0].ToXnaVector2() + bSubAOrigin, Color.Yellow);
+                    break;
+                
+                case 2:
+                    _spriteBatch.DrawLine(w[0].ToXnaVector2() + bSubAOrigin, w[1].ToXnaVector2() + bSubAOrigin, Color.Yellow);
+                    break;
+                
+                case 3:
+                    _spriteBatch.DrawLine(w[0].ToXnaVector2() + bSubAOrigin, w[1].ToXnaVector2() + bSubAOrigin, Color.Yellow);
+                    _spriteBatch.DrawLine(w[1].ToXnaVector2() + bSubAOrigin, w[2].ToXnaVector2() + bSubAOrigin, Color.Yellow);
+                    _spriteBatch.DrawLine(w[2].ToXnaVector2() + bSubAOrigin, w[0].ToXnaVector2() + bSubAOrigin, Color.Yellow);
+                    break;
+            }
+            
         }
     }
 }

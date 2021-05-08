@@ -7,7 +7,7 @@ namespace ViLAWAVE.Echollision
 {
     public static class Collision
     {
-        private const float Tolerance = Single.Epsilon * 100; // [van der Bergen 2003] P.143
+        private const float Tolerance = 1e-8f; // [van der Bergen 2003] P.143
         private const float RelativeErrorTolerance = 1e-8f;
 
         public static float DetectGjk(
@@ -16,6 +16,7 @@ namespace ViLAWAVE.Echollision
         )
         {
             var k = 0;
+            DebugDraw.Clear();
             DebugDraw.OnDrawString("origin", Vector2.Zero);
             DebugDraw.OnDrawPoint(Vector2.Zero);
             // Pick arbitrary support point as initial v
@@ -42,7 +43,9 @@ namespace ViLAWAVE.Echollision
                 }
 
                 var vkLengthSquared = v.LengthSquared();
-                if (vkLengthSquared - Vector2.Dot(v, w) <= RelativeErrorTolerance * vkLengthSquared)
+                var vDotW = Vector2.Dot(v, w);
+                var vIsCloseToVFactor = RelativeErrorTolerance * vkLengthSquared;
+                if (vkLengthSquared - vDotW <= vIsCloseToVFactor)
                 {
                     return v.Length();
                 }
@@ -92,12 +95,15 @@ namespace ViLAWAVE.Echollision
                     lambda[0] = 1;
                     vertexCount = 1;
                     break;
+                default:
+                    Debugger.Break();
+                    throw new ApplicationException("Assertion Error");
             }
         }
 
         private static bool IsSameSign(float a, float b)
         {
-            return a * b > 0;
+            return (a > 0f && b > 0f) || (a < 0f && b < 0f);
         }
 
         private static void S2D(ref Span<Vector2> w, ref Span<float> lambda, ref int vertexCount)
@@ -160,8 +166,23 @@ namespace ViLAWAVE.Echollision
                     break;
                 
                 default:
-                    Debugger.Break();
-                    throw new ApplicationException("Assertion Error");
+                    // Ill case of which detM = 0
+                    var minLengthSquared = w[0].LengthSquared();
+                    var minVertexIndex = 0;
+                    for (var vertIndex = 1; vertIndex < 3; vertIndex++)
+                    {
+                        var ls = w[vertIndex].LengthSquared();
+                        if (ls >= minLengthSquared) continue;
+                        minLengthSquared = ls;
+                        minVertexIndex = vertIndex;
+                    }
+
+                    w[0] = w[minVertexIndex];
+                    lambda[0] = 1f;
+                    vertexCount = 1;
+                    // Debugger.Break();
+                    // throw new ApplicationException("Assertion Error");
+                    break;
             }
         }
 
