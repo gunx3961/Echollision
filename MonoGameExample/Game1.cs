@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended;
 using MonoGame.Extended.Input;
 using ViLAWAVE.Echollision;
 using ViLAWAVE.Echollision.Collider;
@@ -41,7 +42,7 @@ namespace MonoGameExample
         private float _distance = 0f;
         private ICollider _colliderA;
         private ICollider _colliderB;
-        private GameTime _lastDebugBaseTime = new GameTime();
+        private int _debugCursor = 0;
 
         // Position
         private Vector2 _positionABase = new Vector2(400, 320);
@@ -78,8 +79,6 @@ namespace MonoGameExample
 
         protected override void Initialize()
         {
-            // TODO: Add your initialization logic here
-
             _graphics.PreferredBackBufferWidth = _logicalSize.X;
             _graphics.PreferredBackBufferHeight = _logicalSize.Y;
             _graphics.ApplyChanges();
@@ -96,15 +95,33 @@ namespace MonoGameExample
 
             _sampleNormals = normals;
 
-            _colliderA = new SphereCollider(100);
-            _colliderB = new SphereCollider(200);
-            // _colliderB = new ConvexCollider(new SystemVector2[]
+            // _colliderA = new SphereCollider(100);
+            // _colliderA = new ConvexCollider(new SystemVector2[]
             // {
-            //     new SystemVector2(-100, -100),
-            //     new SystemVector2(100, -100),
+            //     new SystemVector2(-200, -100),
+            //     new SystemVector2(200, -100),
             //     new SystemVector2(100, 100),
-            //     new SystemVector2(-100, 100)
             // });
+
+            _colliderA = new ConvexHullCollider(new ICollider[]
+            {
+                new SphereCollider(200),
+                new ConvexCollider(new SystemVector2[]
+                {
+                    new SystemVector2(-200, -100),
+                    new SystemVector2(200, -100),
+                    new SystemVector2(100, 100),
+                })
+            });
+
+            // _colliderB = new SphereCollider(200);
+            _colliderB = new ConvexCollider(new SystemVector2[]
+            {
+                new SystemVector2(-100, -100),
+                new SystemVector2(100, -100),
+                new SystemVector2(100, 100),
+                new SystemVector2(-100, 100)
+            });
 
             base.Initialize();
         }
@@ -112,8 +129,6 @@ namespace MonoGameExample
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
-
-            // TODO: use this.Content to load your game content here
 
             _pixel = new Texture2D(_spriteBatch.GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
             _pixel.SetData(new[] {Color.White});
@@ -125,6 +140,19 @@ namespace MonoGameExample
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed ||
                 Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
+
+            // Debug cursor
+            var keyboardState = KeyboardExtended.GetState();
+            if (keyboardState.WasKeyJustDown(Keys.R)) _debugCursor = 0;
+
+            if (keyboardState.WasKeyJustDown(Keys.Left))
+            {
+                _debugCursor = Math.Clamp(_debugCursor - 1, 0, Int32.MaxValue);
+            }
+            else if (keyboardState.WasKeyJustDown(Keys.Right))
+            {
+                _debugCursor = Math.Clamp(_debugCursor + 1, 0, Int32.MaxValue);
+            }
 
             var mouseState = MouseExtended.GetState();
             switch (_controlMode)
@@ -168,25 +196,25 @@ namespace MonoGameExample
             {
                 case ControlMode.Movement when _colliderTarget == ColliderTarget.A:
                     _movementA = controlVector;
-                    _lastDebugBaseTime = gameTime;
+                    _debugCursor = 0;
                     break;
                 case ControlMode.Movement when _colliderTarget == ColliderTarget.B:
                     _movementB = controlVector;
-                    _lastDebugBaseTime = gameTime;
+                    _debugCursor = 0;
                     break;
 
                 case ControlMode.Position when _colliderTarget == ColliderTarget.A:
                     _positionAControl = controlVector;
-                    _lastDebugBaseTime = gameTime;
+                    _debugCursor = 0;
                     break;
                 case ControlMode.Position when _colliderTarget == ColliderTarget.B:
                     _positionBControl = controlVector;
-                    _lastDebugBaseTime = gameTime;
+                    _debugCursor = 0;
                     break;
 
                 case ControlMode.Ratio:
                     _ratioControl = controlVector.Y * 2 / _logicalSize.Y;
-                    _lastDebugBaseTime = gameTime;
+                    _debugCursor = 0;
                     break;
             }
 
@@ -194,7 +222,6 @@ namespace MonoGameExample
                 TransformB, _movementB.ToSystemVector2());
 
             _distance = Collision.DetectGjk(_colliderA, TransformA, _colliderB, TransformB);
-            _lastDebugBaseTime = gameTime;
 
             base.Update(gameTime);
         }
@@ -219,7 +246,7 @@ namespace MonoGameExample
         private static readonly Color ColorB = Color.Orange;
         private static readonly Color ColorBSubA = Color.White;
         private static readonly Color ColorCollision = Color.Yellow;
-        
+
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(_bgColor);
@@ -239,7 +266,7 @@ namespace MonoGameExample
             var translationB = new SystemVector2(PositionB.X, PositionB.Y);
             var transformB = new Transform(translationB, 0);
             DrawCollider(_colliderB, transformB, _movementB, Ratio, ColorB);
-            
+
             DrawDebug(gameTime);
 
             _spriteBatch.End();
@@ -391,27 +418,27 @@ namespace MonoGameExample
             var barEnd = new Vector2(_logicalSize.X * Ratio, _logicalSize.Y - ratioBarThickness);
             _spriteBatch.DrawLine(barStart, barEnd, Color.LightGray, ratioBarThickness);
         }
-        
-        private Vector2 _minkowskiDifferenceOrigin => _logicalSize.ToVector2() / 2;
+
+        private Vector2 MinkowskiDifferenceOrigin => _logicalSize.ToVector2() / 2;
 
         private void DrawDebug(GameTime gameTime)
         {
-            var timeStep = (int)((gameTime.TotalGameTime - _lastDebugBaseTime.TotalGameTime).TotalSeconds / 0.5);
-            
             // B-A
-            var bSubAOrigin = _minkowskiDifferenceOrigin;
+            var bSubAOrigin = MinkowskiDifferenceOrigin;
             DrawMinkowskiDifference(_colliderA, TransformA, _colliderB, TransformB,
                 (_movementA - _movementB).ToSystemVector2(),
                 bSubAOrigin, _isCollide ? ColorCollision : ColorBSubA);
 
             // Distance
-            _spriteBatch.DrawString(_defaultFont, _distance.ToString(), new Vector2(16, _logicalSize.Y - 32), Color.White,
+            _spriteBatch.DrawString(_defaultFont, _distance.ToString(), new Vector2(16, _logicalSize.Y - 32),
+                Color.White,
                 0, Vector2.Zero, 4, SpriteEffects.None, 0);
-            
+
             // Debug draws
             for (var i = 0; i < DebugDraw.DebugLines.Count; i += 2)
             {
-                _spriteBatch.DrawLine(DebugDraw.DebugLines[i].ToXnaVector2() + bSubAOrigin, DebugDraw.DebugLines[i + 1].ToXnaVector2() + bSubAOrigin, Color.Green);
+                _spriteBatch.DrawLine(DebugDraw.DebugLines[i].ToXnaVector2() + bSubAOrigin,
+                    DebugDraw.DebugLines[i + 1].ToXnaVector2() + bSubAOrigin, Color.Green);
             }
 
             for (var i = 0; i < DebugDraw.DebugPoints.Count; i += 1)
@@ -427,25 +454,33 @@ namespace MonoGameExample
             }
 
             if (DebugDraw.DebugSimplexes.Count == 0) return;
-            var simplexIndex = timeStep % DebugDraw.DebugSimplexes.Count;
-            var (simplexVertexCount, w) = DebugDraw.DebugSimplexes[simplexIndex];
+            var simplexIndex = Math.Clamp(_debugCursor, 0, DebugDraw.DebugSimplexes.Count - 1);
+            var (simplexVertexCount, w, v, newW) = DebugDraw.DebugSimplexes[simplexIndex];
             switch (simplexVertexCount)
             {
                 case 1:
-                    DrawCross(w[0].ToXnaVector2() + bSubAOrigin, Color.Yellow);
+                    _spriteBatch.DrawPoint(v.ToXnaVector2() + bSubAOrigin, Color.Yellow, size: 5f);
+                    _spriteBatch.DrawPoint(newW.ToXnaVector2() + bSubAOrigin, Color.Red, size: 5f);
                     break;
-                
+
                 case 2:
-                    _spriteBatch.DrawLine(w[0].ToXnaVector2() + bSubAOrigin, w[1].ToXnaVector2() + bSubAOrigin, Color.Yellow);
+                    _spriteBatch.DrawLine(w[0].ToXnaVector2() + bSubAOrigin, w[1].ToXnaVector2() + bSubAOrigin,
+                        Color.Yellow);
+                    _spriteBatch.DrawPoint(v.ToXnaVector2() + bSubAOrigin, Color.Yellow, size: 5f);
+                    _spriteBatch.DrawPoint(newW.ToXnaVector2() + bSubAOrigin, Color.Red, size: 5f);
                     break;
-                
+
                 case 3:
-                    _spriteBatch.DrawLine(w[0].ToXnaVector2() + bSubAOrigin, w[1].ToXnaVector2() + bSubAOrigin, Color.Yellow);
-                    _spriteBatch.DrawLine(w[1].ToXnaVector2() + bSubAOrigin, w[2].ToXnaVector2() + bSubAOrigin, Color.Yellow);
-                    _spriteBatch.DrawLine(w[2].ToXnaVector2() + bSubAOrigin, w[0].ToXnaVector2() + bSubAOrigin, Color.Yellow);
+                    _spriteBatch.DrawLine(w[0].ToXnaVector2() + bSubAOrigin, w[1].ToXnaVector2() + bSubAOrigin,
+                        Color.Yellow);
+                    _spriteBatch.DrawLine(w[1].ToXnaVector2() + bSubAOrigin, w[2].ToXnaVector2() + bSubAOrigin,
+                        Color.Yellow);
+                    _spriteBatch.DrawLine(w[2].ToXnaVector2() + bSubAOrigin, w[0].ToXnaVector2() + bSubAOrigin,
+                        Color.Yellow);
+                    _spriteBatch.DrawPoint(v.ToXnaVector2() + bSubAOrigin, Color.Yellow, size: 5f);
+                    _spriteBatch.DrawPoint(newW.ToXnaVector2() + bSubAOrigin, Color.Red, size: 5f);
                     break;
             }
-            
         }
     }
 }

@@ -17,8 +17,8 @@ namespace ViLAWAVE.Echollision
         {
             var k = 0;
             DebugDraw.Clear();
-            DebugDraw.OnDrawString("origin", Vector2.Zero);
-            DebugDraw.OnDrawPoint(Vector2.Zero);
+            DebugDraw.DrawString("origin", Vector2.Zero);
+            DebugDraw.DrawPoint(Vector2.Zero);
             // Pick arbitrary support point as initial v
             var v = SupportOfMinkowskiDifference(a, transformA, b, transformB, Vector2.UnitX);
 
@@ -26,15 +26,15 @@ namespace ViLAWAVE.Echollision
             Span<float> lambda = stackalloc float[3];
             var vertexCount = 0;
 
-            while (k < 10)
+            while (k < 24)
             {
                 k += 1;
                 var negativeVDirection = Vector2.Normalize(-v) * 100;
-                DebugDraw.OnDrawLine(Vector2.Zero, negativeVDirection);
-                DebugDraw.OnDrawString($"-v{(k - 1).ToString()}", negativeVDirection);
+                DebugDraw.DrawLine(Vector2.Zero, negativeVDirection);
+                DebugDraw.DrawString($"-v{(k - 1).ToString()}", negativeVDirection);
                 var w = SupportOfMinkowskiDifference(a, transformA, b, transformB, -v);
-                DebugDraw.OnDrawPoint(w);
-                DebugDraw.OnDrawString($"w{(k - 1).ToString()}", w);
+                // DebugDraw.DrawPoint(w);
+                // DebugDraw.DrawString($"w{(k - 1).ToString()}", w);
                 int i;
                 for (i = 0; i < vertexCount; i++)
                 {
@@ -59,8 +59,10 @@ namespace ViLAWAVE.Echollision
                 {
                     v += lambda[i] * tau[i];
                 }
-                DebugDraw.OnDrawPoint(v);
-                DebugDraw.OnDrawString($"v{k}", v);
+                
+                DebugDraw.DrawGjkIteration(vertexCount, tau, v, w);
+                DebugDraw.DrawPoint(v);
+                DebugDraw.DrawString($"v{k}", v);
 
                 // Termination
                 var maxWLengthSquared = tau[0].LengthSquared();

@@ -9,7 +9,9 @@ namespace ViLAWAVE.Echollision
         public static readonly List<Vector2> DebugPoints = new List<Vector2>();
         public static readonly List<Vector2> DebugLines = new List<Vector2>();
         public static readonly List<Tuple<string, Vector2>> DebugStrings = new List<Tuple<string, Vector2>>();
-        public static readonly List<Tuple<int, Vector2[]>> DebugSimplexes = new List<Tuple<int, Vector2[]>>();
+
+        public static readonly List<Tuple<int, Vector2[], Vector2, Vector2>> DebugSimplexes =
+            new List<Tuple<int, Vector2[], Vector2, Vector2>>();
 
         public static void Clear()
         {
@@ -19,22 +21,22 @@ namespace ViLAWAVE.Echollision
             DebugSimplexes.Clear();
         }
 
-        public static void OnDrawPoint(Vector2 point)
+        public static void DrawPoint(Vector2 point)
         {
             DebugPoints.Add(new Vector2(point.X, point.Y));
         }
 
-        public static void OnDrawLine(Vector2 start, Vector2 end)
+        public static void DrawLine(Vector2 start, Vector2 end)
         {
             DebugLines.Add(new Vector2(start.X, start.Y));
             DebugLines.Add(new Vector2(end.X, end.Y));
         }
 
-        public static void OnDrawString(string text, Vector2 position)
+        public static void DrawString(string text, Vector2 position)
         {
             DebugStrings.Add(new Tuple<string, Vector2>(text, new Vector2(position.X, position.Y)));
         }
-        
+
         // public static void OnDrawMovement(Vector2 start, Vector2 end)
         // {
         //     var ratioPoint = start + (end - start) * Ratio;
@@ -43,10 +45,9 @@ namespace ViLAWAVE.Echollision
         //     _debugPoints.Add(ratioPoint.ToXnaVector2());
         // }
 
-        public static void OnDrawSimplex(int vertexCount, Span<Vector2> w)
+        public static void DrawGjkIteration(int vertexCount, Span<Vector2> w, Vector2 v, Vector2 newW)
         {
-            DebugSimplexes.Add(new Tuple<int, Vector2[]>(vertexCount, w.ToArray()));
+            DebugSimplexes.Add(new Tuple<int, Vector2[], Vector2, Vector2>(vertexCount, w.ToArray(), v, newW));
         }
-
     }
 }
