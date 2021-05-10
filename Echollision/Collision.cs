@@ -94,7 +94,7 @@ namespace ViLAWAVE.Echollision
                     S1DMyVersion(ref tau, ref lambda, ref vertexCount);
                     break;
                 case 1:
-                    lambda[0] = 1;
+                    lambda[0] = 1f;
                     vertexCount = 1;
                     break;
                 default:
@@ -135,6 +135,7 @@ namespace ViLAWAVE.Echollision
                     vertexCount = 3;
                     break;
 
+                // FIXME: we should compare each S1D result
                 case 0b100:
                     w[0] = s1;
                     lambda[0] = 1f;
@@ -185,6 +186,42 @@ namespace ViLAWAVE.Echollision
                     // Debugger.Break();
                     // throw new ApplicationException("Assertion Error");
                     break;
+            }
+        }
+
+        private static void S1D(ref Span<Vector2> w, ref Span<float> lambda, ref int vertexCount)
+        {
+            var s1 = w[0];
+            var s2 = w[1];
+
+            var t = s2 - s1;
+            var po = Vector2.Dot(s2, t) / t.LengthSquared() * t + s2;
+
+            Span<float> s1Components = stackalloc float[] {s1.X, s1.Y};
+            Span<float> s2Components = stackalloc float[] {s2.X, s2.Y};
+            Span<float> poComponents = stackalloc float[] {po.X, po.Y};
+            var s2S1 = s1 - s2;
+            var componentIndex = 0;
+            var miuMax = s2S1.X;
+            if (Math.Abs(s2S1.Y) > Math.Abs(s2S1.X))
+            {
+                componentIndex = 1;
+                miuMax = s2S1.Y;
+            }
+            
+            var cofactor1 = poComponents[componentIndex] - s2Components[componentIndex];
+            var cofactor2 = s1Components[componentIndex] - poComponents[componentIndex];
+
+            if (IsSameSign(miuMax, cofactor1) && IsSameSign(miuMax, cofactor2))
+            {
+                lambda[0] = cofactor1 / miuMax;
+                lambda[1] = cofactor2 / miuMax;
+                vertexCount = 2;
+            }
+            else
+            {
+                lambda[0] = 1f;
+                vertexCount = 1;
             }
         }
 
