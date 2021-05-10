@@ -7,10 +7,18 @@ namespace ViLAWAVE.Echollision
 {
     public static class Collision
     {
-        private const float Tolerance = 1e-8f; // [van der Bergen 2003] P.143
-        private const float RelativeErrorTolerance = 1e-8f;
+        private const float Tolerance = 1e-4f; // [van der Bergen 2003] P.143
+        private const float RelativeErrorTolerance = 1e-4f;
 
-        public static float DetectGjk(
+        /// <summary>
+        /// Distance query via GJK
+        /// </summary>
+        /// <param name="a"></param>
+        /// <param name="transformA"></param>
+        /// <param name="b"></param>
+        /// <param name="transformB"></param>
+        /// <returns>Distance</returns>
+        public static float Distance(
             ICollider a, in Transform transformA,
             ICollider b, in Transform transformB
         )
@@ -26,20 +34,20 @@ namespace ViLAWAVE.Echollision
             Span<float> lambda = stackalloc float[3];
             var vertexCount = 0;
 
-            while (k < 24)
+            while (k < 65535)
             {
                 k += 1;
                 var negativeVDirection = Vector2.Normalize(-v) * 100;
                 DebugDraw.DrawLine(Vector2.Zero, negativeVDirection);
                 DebugDraw.DrawString($"-v{(k - 1).ToString()}", negativeVDirection);
                 var w = SupportOfMinkowskiDifference(a, transformA, b, transformB, -v);
-                // DebugDraw.DrawPoint(w);
-                // DebugDraw.DrawString($"w{(k - 1).ToString()}", w);
+                DebugDraw.DrawPoint(w);
+                DebugDraw.DrawString($"w{(k - 1).ToString()}", w);
                 int i;
-                for (i = 0; i < vertexCount; i++)
+                for (i = 0; i < vertexCount; i += 1)
                 {
-                    if ((w - tau[i]).LengthSquared() < RelativeErrorTolerance) return v.Length();
-                    // if (w == tau[i]) return v.Length();
+                    // if ((w - tau[i]).LengthSquared() < RelativeErrorTolerance) return v.Length();
+                    if (w == tau[i]) return v.Length();
                 }
 
                 var vkLengthSquared = v.LengthSquared();
@@ -55,7 +63,7 @@ namespace ViLAWAVE.Echollision
 
                 DistanceSv(ref tau, ref lambda, ref vertexCount);
                 v = Vector2.Zero;
-                for (i = 0; i < vertexCount; i++)
+                for (i = 0; i < vertexCount; i += 1)
                 {
                     v += lambda[i] * tau[i];
                 }
@@ -66,7 +74,7 @@ namespace ViLAWAVE.Echollision
 
                 // Termination
                 var maxWLengthSquared = tau[0].LengthSquared();
-                for (i = 1; i < vertexCount; i++)
+                for (i = 1; i < vertexCount; i += 1)
                 {
                     var wls = tau[i].LengthSquared();
                     if (wls > maxWLengthSquared) maxWLengthSquared = wls;
@@ -91,7 +99,7 @@ namespace ViLAWAVE.Echollision
                     S2D(ref tau, ref lambda, ref vertexCount);
                     break;
                 case 2:
-                    S1DMyVersion(ref tau, ref lambda, ref vertexCount);
+                    S1D(ref tau, ref lambda, ref vertexCount);
                     break;
                 case 1:
                     lambda[0] = 1f;
@@ -119,113 +127,100 @@ namespace ViLAWAVE.Echollision
             var cofactor33 = (s1.X * s2.Y) - (s2.X * s1.Y);
             var detM = cofactor31 + cofactor32 + cofactor33;
 
-            var flag = 0b000;
-            if (IsSameSign(detM, cofactor31)) flag |= 0b100;
-            if (IsSameSign(detM, cofactor32)) flag |= 0b010;
-            if (IsSameSign(detM, cofactor33)) flag |= 0b001;
+            var isSame1 = IsSameSign(detM, cofactor31);
+            var isSame2 = IsSameSign(detM, cofactor32);
+            var isSame3 = IsSameSign(detM, cofactor33);
 
-
-            switch (flag)
+            if (isSame1 && isSame2 && isSame3)
             {
-                case 0b111:
-                    // Origin is inside the 2-simplex 
-                    lambda[0] = cofactor31 / detM;
-                    lambda[1] = cofactor32 / detM;
-                    lambda[2] = cofactor33 / detM;
-                    vertexCount = 3;
-                    break;
+                // Origin is inside the 2-simplex 
+                lambda[0] = cofactor31 / detM;
+                lambda[1] = cofactor32 / detM;
+                lambda[2] = cofactor33 / detM;
+                vertexCount = 3;
+                return;
+            }
 
-                // FIXME: we should compare each S1D result
-                case 0b100:
-                    w[0] = s1;
-                    lambda[0] = 1f;
-                    vertexCount = 1;
-                    break;
-                case 0b010:
-                    w[0] = s2;
-                    lambda[0] = 1f;
-                    vertexCount = 1;
-                    break;
-                case 0b001:
-                    w[0] = s3;
-                    lambda[0] = 1f;
-                    vertexCount = 1;
-                    break;
+            Span<Vector2> tempW = stackalloc Vector2[2];
+            Span<float> tempLambda = stackalloc float[2];
+            var tempVertexCount = 2;
+            int i;
+            Vector2 tempV;
+            float tempLengthSquared;
+            var minDistanceSquared = float.MaxValue;
 
-                case 0b110:
-                    w[0] = s1;
-                    w[1] = s2;
-                    S1DMyVersion(ref w, ref lambda, ref vertexCount);
-                    break;
-                case 0b101:
-                    w[0] = s1;
-                    w[1] = s3;
-                    S1DMyVersion(ref w, ref lambda, ref vertexCount);
-                    break;
-                case 0b011:
-                    w[0] = s2;
-                    w[1] = s3;
-                    S1DMyVersion(ref w, ref lambda, ref vertexCount);
-                    break;
-                
-                default:
-                    // Ill case of which detM = 0
-                    var minLengthSquared = w[0].LengthSquared();
-                    var minVertexIndex = 0;
-                    for (var vertIndex = 1; vertIndex < 3; vertIndex++)
+            if (!isSame1)
+            {
+                tempW[0] = s2;
+                tempW[1] = s3;
+                S1D(ref tempW, ref tempLambda, ref tempVertexCount);
+                tempV = Vector2.Zero;
+                for (i = 0; i < tempVertexCount; i += 1)
+                {
+                    tempV += tempLambda[i] * tempW[i];
+                }
+
+                tempLengthSquared = tempV.LengthSquared();
+                if (tempLengthSquared < minDistanceSquared)
+                {
+                    minDistanceSquared = tempLengthSquared;
+                    vertexCount = tempVertexCount;
+                    for (i = 0; i < tempVertexCount; i += 1)
                     {
-                        var ls = w[vertIndex].LengthSquared();
-                        if (ls >= minLengthSquared) continue;
-                        minLengthSquared = ls;
-                        minVertexIndex = vertIndex;
+                        w[i] = tempW[i];
+                        lambda[i] = tempLambda[i];
                     }
+                }
+            }
+            
+            if (!isSame2)
+            {
+                tempW[0] = s1;
+                tempW[1] = s3;
+                S1D(ref tempW, ref tempLambda, ref tempVertexCount);
+                tempV = Vector2.Zero;
+                for (i = 0; i < tempVertexCount; i += 1)
+                {
+                    tempV += tempLambda[i] * tempW[i];
+                }
 
-                    w[0] = w[minVertexIndex];
-                    lambda[0] = 1f;
-                    vertexCount = 1;
-                    // Debugger.Break();
-                    // throw new ApplicationException("Assertion Error");
-                    break;
+                tempLengthSquared = tempV.LengthSquared();
+                if (tempLengthSquared < minDistanceSquared)
+                {
+                    minDistanceSquared = tempLengthSquared;
+                    vertexCount = tempVertexCount;
+                    for (i = 0; i < tempVertexCount; i += 1)
+                    {
+                        w[i] = tempW[i];
+                        lambda[i] = tempLambda[i];
+                    }
+                }
+            }
+            
+            if (!isSame3)
+            {
+                tempW[0] = s1;
+                tempW[1] = s2;
+                S1D(ref tempW, ref tempLambda, ref tempVertexCount);
+                tempV = Vector2.Zero;
+                for (i = 0; i < tempVertexCount; i += 1)
+                {
+                    tempV += tempLambda[i] * tempW[i];
+                }
+
+                if (tempV.LengthSquared() < minDistanceSquared)
+                {
+                    vertexCount = tempVertexCount;
+                    for (i = 0; i < tempVertexCount; i += 1)
+                    {
+                        w[i] = tempW[i];
+                        lambda[i] = tempLambda[i];
+                    }
+                }
             }
         }
 
         private static void S1D(ref Span<Vector2> w, ref Span<float> lambda, ref int vertexCount)
-        {
-            var s1 = w[0];
-            var s2 = w[1];
-
-            var t = s2 - s1;
-            var po = Vector2.Dot(s2, t) / t.LengthSquared() * t + s2;
-
-            Span<float> s1Components = stackalloc float[] {s1.X, s1.Y};
-            Span<float> s2Components = stackalloc float[] {s2.X, s2.Y};
-            Span<float> poComponents = stackalloc float[] {po.X, po.Y};
-            var s2S1 = s1 - s2;
-            var componentIndex = 0;
-            var miuMax = s2S1.X;
-            if (Math.Abs(s2S1.Y) > Math.Abs(s2S1.X))
-            {
-                componentIndex = 1;
-                miuMax = s2S1.Y;
-            }
-            
-            var cofactor1 = poComponents[componentIndex] - s2Components[componentIndex];
-            var cofactor2 = s1Components[componentIndex] - poComponents[componentIndex];
-
-            if (IsSameSign(miuMax, cofactor1) && IsSameSign(miuMax, cofactor2))
-            {
-                lambda[0] = cofactor1 / miuMax;
-                lambda[1] = cofactor2 / miuMax;
-                vertexCount = 2;
-            }
-            else
-            {
-                lambda[0] = 1f;
-                vertexCount = 1;
-            }
-        }
-
-        private static void S1DMyVersion(ref Span<Vector2> w, ref Span<float> lambda, ref int vertexCount)
         {
             var s1 = w[0];
             var s2 = w[1];
@@ -276,7 +271,15 @@ namespace ViLAWAVE.Echollision
             vertexCount = 2;
         }
 
-        public static bool Detect(
+        /// <summary>
+        /// Intersection detection via MPR
+        /// </summary>
+        /// <param name="a"></param>
+        /// <param name="transformA"></param>
+        /// <param name="b"></param>
+        /// <param name="transformB"></param>
+        /// <returns>Intersection</returns>
+        public static bool Intersection(
             ICollider a, in Transform transformA,
             ICollider b, in Transform transformB
         )

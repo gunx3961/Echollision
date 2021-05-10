@@ -218,10 +218,8 @@ namespace MonoGameExample
                     break;
             }
 
-            _isCollide = Collision.DetectPriori(_colliderA, TransformA, _movementA.ToSystemVector2(), _colliderB,
-                TransformB, _movementB.ToSystemVector2());
-
-            _distance = Collision.DetectGjk(_colliderA, TransformA, _colliderB, TransformB);
+            _isCollide = Collision.Intersection(_colliderA, TransformA, _colliderB, TransformB);
+            _distance = Collision.Distance(_colliderA, TransformA, _colliderB, TransformB);
 
             base.Update(gameTime);
         }
@@ -229,12 +227,12 @@ namespace MonoGameExample
         private ColliderTarget DetermineTarget(Point mousePosition)
         {
             var mouseTransform = new Transform(mousePosition.ToVector2().ToSystemVector2(), 0);
-            if (Collision.Detect(_pointer, mouseTransform, _colliderA, TransformA))
+            if (Collision.Intersection(_pointer, mouseTransform, _colliderA, TransformA))
             {
                 return ColliderTarget.A;
             }
 
-            if (Collision.Detect(_pointer, mouseTransform, _colliderB, TransformB))
+            if (Collision.Intersection(_pointer, mouseTransform, _colliderB, TransformB))
             {
                 return ColliderTarget.B;
             }
@@ -402,7 +400,7 @@ namespace MonoGameExample
             _spriteBatch.DrawString(_defaultFont, fpsText, stringPosition, Color.LightGray, 0, Vector2.Zero, 2,
                 SpriteEffects.None, 0);
 
-            const string note = "@ ViLAWAVE.Echollision MPR collision detection";
+            const string note = "@ ViLAWAVE.Echollision Hybrid Collision Detection";
             var noteSize = _defaultFont.MeasureString(note);
             _spriteBatch.DrawString(_defaultFont, note,
                 _logicalSize.ToVector2() - noteSize * 2 - new Vector2(0, _defaultFont.LineSpacing * 2), Color.LightGray,
