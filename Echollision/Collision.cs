@@ -7,8 +7,8 @@ namespace ViLAWAVE.Echollision
 {
     public static class Collision
     {
-        private const float Tolerance = 1e-4f; // [van der Bergen 2003] P.143
-        private const float RelativeErrorTolerance = 1e-4f;
+        private const float Tolerance = 1e-6f; // [van der Bergen 2003] P.143
+        private const float RelativeErrorBound = 0.001f; // 0.1%
 
         /// <summary>
         /// Distance query via GJK
@@ -30,56 +30,64 @@ namespace ViLAWAVE.Echollision
             // Pick arbitrary support point as initial v
             var v = SupportOfMinkowskiDifference(a, transformA, b, transformB, Vector2.UnitX);
 
-            Span<Vector2> tau = stackalloc Vector2[3];
+            
+            Span<Vector2> setW = stackalloc Vector2[3];
+            var wCount = 0;
+            Span<Vector2> setY = stackalloc Vector2[3];
+            var yCount = 0;
             Span<float> lambda = stackalloc float[3];
-            var vertexCount = 0;
 
             while (k < 65535)
             {
                 k += 1;
                 var negativeVDirection = Vector2.Normalize(-v) * 100;
+                DebugDraw.UpdateIterationCounter(k);
                 DebugDraw.DrawLine(Vector2.Zero, negativeVDirection);
                 DebugDraw.DrawString($"-v{(k - 1).ToString()}", negativeVDirection);
                 var w = SupportOfMinkowskiDifference(a, transformA, b, transformB, -v);
                 DebugDraw.DrawPoint(w);
                 DebugDraw.DrawString($"w{(k - 1).ToString()}", w);
                 int i;
-                for (i = 0; i < vertexCount; i += 1)
+                for (i = 0; i < yCount; i += 1)
                 {
-                    // if ((w - tau[i]).LengthSquared() < RelativeErrorTolerance) return v.Length();
-                    if (w == tau[i]) return v.Length();
+                    if (w == setY[i]) return v.Length();
                 }
 
                 var vkLengthSquared = v.LengthSquared();
                 var vDotW = Vector2.Dot(v, w);
-                var vIsCloseToVFactor = RelativeErrorTolerance * vkLengthSquared;
+                var vIsCloseToVFactor = RelativeErrorBound * vkLengthSquared;
                 if (vkLengthSquared - vDotW <= vIsCloseToVFactor)
                 {
                     return v.Length();
                 }
 
-                tau[vertexCount] = w;
-                vertexCount += 1;
-
-                DistanceSv(ref tau, ref lambda, ref vertexCount);
-                v = Vector2.Zero;
-                for (i = 0; i < vertexCount; i += 1)
+                setW[wCount] = w;
+                wCount += 1;
+                for (i = 0; i < wCount; i += 1)
                 {
-                    v += lambda[i] * tau[i];
+                    setY[i] = setW[i];
+                }
+                yCount = wCount;
+
+                DistanceSv(ref setW, ref lambda, ref wCount);
+                v = Vector2.Zero;
+                for (i = 0; i < wCount; i += 1)
+                {
+                    v += lambda[i] * setW[i];
                 }
                 
-                DebugDraw.DrawGjkIteration(vertexCount, tau, v, w);
+                DebugDraw.DrawGjkIteration(wCount, setW, v, w);
                 DebugDraw.DrawPoint(v);
                 DebugDraw.DrawString($"v{k}", v);
 
                 // Termination
-                var maxWLengthSquared = tau[0].LengthSquared();
-                for (i = 1; i < vertexCount; i += 1)
+                var maxWLengthSquared = setW[0].LengthSquared();
+                for (i = 1; i < wCount; i += 1)
                 {
-                    var wls = tau[i].LengthSquared();
+                    var wls = setW[i].LengthSquared();
                     if (wls > maxWLengthSquared) maxWLengthSquared = wls;
                 }
-                if (vertexCount >= 3 || vkLengthSquared <= Tolerance * maxWLengthSquared)
+                if (wCount >= 3 || vkLengthSquared <= Tolerance * maxWLengthSquared)
                 {
                     // We regard v as zero
                     return 0f;

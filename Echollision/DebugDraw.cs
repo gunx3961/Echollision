@@ -9,6 +9,7 @@ namespace ViLAWAVE.Echollision
         public static readonly List<Vector2> DebugPoints = new List<Vector2>();
         public static readonly List<Vector2> DebugLines = new List<Vector2>();
         public static readonly List<Tuple<string, Vector2>> DebugStrings = new List<Tuple<string, Vector2>>();
+        public static int IterationCounter { get; private set; } = 0;
 
         public static readonly List<Tuple<int, Vector2[], Vector2, Vector2>> DebugSimplexes =
             new List<Tuple<int, Vector2[], Vector2, Vector2>>();
@@ -19,6 +20,7 @@ namespace ViLAWAVE.Echollision
             DebugLines.Clear();
             DebugStrings.Clear();
             DebugSimplexes.Clear();
+            IterationCounter = 0;
         }
 
         public static void DrawPoint(Vector2 point)
@@ -48,6 +50,11 @@ namespace ViLAWAVE.Echollision
         public static void DrawGjkIteration(int vertexCount, Span<Vector2> w, Vector2 v, Vector2 newW)
         {
             DebugSimplexes.Add(new Tuple<int, Vector2[], Vector2, Vector2>(vertexCount, w.ToArray(), v, newW));
+        }
+
+        public static void UpdateIterationCounter(int count)
+        {
+            IterationCounter = count;
         }
     }
 }

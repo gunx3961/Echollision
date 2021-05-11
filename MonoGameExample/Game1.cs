@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -45,7 +44,7 @@ namespace MonoGameExample
         private int _debugCursor = 0;
 
         // Position
-        private Vector2 _positionABase = new Vector2(400, 320);
+        private Vector2 _positionABase = new Vector2(196, 469);
         private Vector2 _positionAControl = Vector2.Zero;
         private Vector2 PositionA => _positionABase + _positionAControl;
 
@@ -152,6 +151,13 @@ namespace MonoGameExample
             else if (keyboardState.WasKeyJustDown(Keys.Right))
             {
                 _debugCursor = Math.Clamp(_debugCursor + 1, 0, Int32.MaxValue);
+            }
+            
+            // Dump
+            if (keyboardState.WasKeyJustDown(Keys.T))
+            {
+                System.Diagnostics.Debug.WriteLine($"PositionA: new Vector2({PositionA.X}, {PositionA.Y})");
+                System.Diagnostics.Debug.WriteLine($"PositionB: new Vector2({PositionB.X}, {PositionB.Y})");
             }
 
             var mouseState = MouseExtended.GetState();
@@ -403,7 +409,7 @@ namespace MonoGameExample
             const string note = "@ ViLAWAVE.Echollision Hybrid Collision Detection";
             var noteSize = _defaultFont.MeasureString(note);
             _spriteBatch.DrawString(_defaultFont, note,
-                _logicalSize.ToVector2() - noteSize * 2 - new Vector2(0, _defaultFont.LineSpacing * 2), Color.LightGray,
+                _logicalSize.ToVector2() - noteSize * 2 - new Vector2(0, _defaultFont.LineSpacing), Color.LightGray,
                 0,
                 Vector2.Zero, 2, SpriteEffects.None, 0);
 
@@ -428,9 +434,17 @@ namespace MonoGameExample
                 bSubAOrigin, _isCollide ? ColorCollision : ColorBSubA);
 
             // Distance
-            _spriteBatch.DrawString(_defaultFont, _distance.ToString(), new Vector2(16, _logicalSize.Y - 32),
-                Color.White,
-                0, Vector2.Zero, 4, SpriteEffects.None, 0);
+            _spriteBatch.DrawString(_defaultFont, $"Distance: {_distance}", new Vector2(16, _logicalSize.Y - 32),
+                Color.White, 0, Vector2.Zero, 4, SpriteEffects.None, 0);
+
+            // Counter
+            _spriteBatch.DrawString(_defaultFont, $"k: {DebugDraw.IterationCounter}", new Vector2(16, _logicalSize.Y - 64),
+                Color.White, 0, Vector2.Zero, 4, SpriteEffects.None, 0);
+            if (DebugDraw.IterationCounter > 60000)
+            {
+                System.Diagnostics.Debug.WriteLine($"PositionA: new Vector2({PositionA.X}, {PositionA.Y})");
+                System.Diagnostics.Debug.WriteLine($"PositionB: new Vector2({PositionB.X}, {PositionB.Y})");
+            }
 
             // Debug draws
             for (var i = 0; i < DebugDraw.DebugLines.Count; i += 2)
