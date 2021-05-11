@@ -30,7 +30,7 @@ namespace ViLAWAVE.Echollision
             // Pick arbitrary support point as initial v
             var v = SupportOfMinkowskiDifference(a, transformA, b, transformB, Vector2.UnitX);
 
-            
+
             Span<Vector2> setW = stackalloc Vector2[3];
             var wCount = 0;
             Span<Vector2> setY = stackalloc Vector2[3];
@@ -67,6 +67,7 @@ namespace ViLAWAVE.Echollision
                 {
                     setY[i] = setW[i];
                 }
+
                 yCount = wCount;
 
                 DistanceSv(ref setW, ref lambda, ref wCount);
@@ -75,7 +76,7 @@ namespace ViLAWAVE.Echollision
                 {
                     v += lambda[i] * setW[i];
                 }
-                
+
                 DebugDraw.DrawGjkIteration(wCount, setW, v, w);
                 DebugDraw.DrawPoint(v);
                 DebugDraw.DrawString($"v{k}", v);
@@ -87,6 +88,7 @@ namespace ViLAWAVE.Echollision
                     var wls = setW[i].LengthSquared();
                     if (wls > maxWLengthSquared) maxWLengthSquared = wls;
                 }
+
                 if (wCount >= 3 || vkLengthSquared <= Tolerance * maxWLengthSquared)
                 {
                     // We regard v as zero
@@ -180,7 +182,7 @@ namespace ViLAWAVE.Echollision
                     }
                 }
             }
-            
+
             if (!isSame2)
             {
                 tempW[0] = s1;
@@ -204,7 +206,7 @@ namespace ViLAWAVE.Echollision
                     }
                 }
             }
-            
+
             if (!isSame3)
             {
                 tempW[0] = s1;
@@ -277,6 +279,47 @@ namespace ViLAWAVE.Echollision
             lambda[0] = cofactor1 / miuMax;
             lambda[1] = cofactor2 / miuMax;
             vertexCount = 2;
+        }
+
+        /// <summary>
+        /// Continuous collision detection.<br/>
+        /// </summary>
+        /// <returns>Time of collision.</returns>
+        public static bool Continuous(
+            ICollider a, in Transform transformA, Vector2 translationA,
+            ICollider b, in Transform transformB, Vector2 translationB
+        )
+        {
+            var r = translationA - translationB;
+            var t = 0f; // Hit parameter a.k.a lambda a.k.a. time
+            var x = Vector2.Zero; // Source is the origin
+            var normal = Vector2.Zero;
+            
+            // Initial v = x − “arbitrary point in C”
+            var v = -SupportOfMinkowskiDifference(a, transformA, b, transformB, Vector2.UnitX);
+            var vLengthSquared = v.LengthSquared();
+            Span<Vector2> setP = stackalloc Vector2[3];
+            Vector2 p;
+            Vector2 w;
+            
+            while (vLengthSquared > Tolerance * Tolerance)
+            {
+                p = SupportOfMinkowskiDifference(a, transformA, b, transformB, v);
+                w = x - p;
+
+                var vDotW = Vector2.Dot(v, w);
+                if (vDotW > 0f)
+                {
+                    var vDotR = Vector2.Dot(v, r);
+                    if (vDotR >= 0f) return false;
+                    t = t - vDotW / vDotR;
+                    x = t * r;
+                    normal = v;
+                }
+                // TODO
+            }
+
+            return false;
         }
 
         /// <summary>
