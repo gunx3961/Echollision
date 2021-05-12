@@ -39,6 +39,7 @@ namespace MonoGameExample
         private readonly ICollider _pointer = new SphereCollider(0);
         private bool _isCollide = false;
         private float _distance = 0f;
+        private float _time = 1f;
         private ICollider _colliderA;
         private ICollider _colliderB;
         private int _debugCursor = 0;
@@ -63,7 +64,9 @@ namespace MonoGameExample
         private float Ratio => Math.Clamp(_ratioBase + _ratioControl, 0f, 1f);
 
         private Transform TransformA => new Transform(PositionA.ToSystemVector2(), 0);
+        private Transform TransformAWithCurrentMovement => new Transform((PositionA + _movementA * Ratio).ToSystemVector2(), 0);
         private Transform TransformB => new Transform(PositionB.ToSystemVector2(), 0);
+        private Transform TransformBWithCurrentMovement => new Transform((PositionB + _movementB * Ratio).ToSystemVector2(), 0);
 
 
         public Game1()
@@ -94,7 +97,7 @@ namespace MonoGameExample
 
             _sampleNormals = normals;
 
-            // _colliderA = new SphereCollider(100);
+            _colliderA = new SphereCollider(100);
             // _colliderA = new ConvexCollider(new SystemVector2[]
             // {
             //     new SystemVector2(-200, -100),
@@ -102,25 +105,26 @@ namespace MonoGameExample
             //     new SystemVector2(100, 100),
             // });
 
-            _colliderA = new ConvexHullCollider(new ICollider[]
-            {
-                new SphereCollider(200),
-                new ConvexCollider(new SystemVector2[]
-                {
-                    new SystemVector2(-200, -100),
-                    new SystemVector2(200, -100),
-                    new SystemVector2(100, 100),
-                })
-            });
+            // _colliderA = new ConvexHullCollider(new ICollider[]
+            // {
+            //     new SphereCollider(200),
+            //     new ConvexCollider(new SystemVector2[]
+            //     {
+            //         new SystemVector2(-200, -100),
+            //         new SystemVector2(200, -100),
+            //         new SystemVector2(100, 100),
+            //     })
+            // });
 
-            // _colliderB = new SphereCollider(200);
-            _colliderB = new ConvexCollider(new SystemVector2[]
-            {
-                new SystemVector2(-100, -100),
-                new SystemVector2(100, -100),
-                new SystemVector2(100, 100),
-                new SystemVector2(-100, 100)
-            });
+            _colliderB = new SphereCollider(200);
+            // _colliderB = new SphereCollider(0);
+            // _colliderB = new ConvexCollider(new SystemVector2[]
+            // {
+            //     new SystemVector2(-100, -100),
+            //     new SystemVector2(100, -100),
+            //     new SystemVector2(100, 100),
+            //     new SystemVector2(-100, 100)
+            // });
 
             base.Initialize();
         }
@@ -152,7 +156,7 @@ namespace MonoGameExample
             {
                 _debugCursor = Math.Clamp(_debugCursor + 1, 0, Int32.MaxValue);
             }
-            
+
             // Dump
             if (keyboardState.WasKeyJustDown(Keys.T))
             {
@@ -224,8 +228,12 @@ namespace MonoGameExample
                     break;
             }
 
-            _isCollide = Collision.Intersection(_colliderA, TransformA, _colliderB, TransformB);
-            _distance = Collision.Distance(_colliderA, TransformA, _colliderB, TransformB);
+            // _isCollide = Collision.Intersection(_colliderA, TransformA, _colliderB, TransformB);
+            // _distance = Collision.Distance(_colliderA, TransformA, _colliderB, TransformB);
+            _isCollide = Collision.Continuous(_colliderA, TransformA, _movementA.ToSystemVector2(), _colliderB,
+                TransformB, _movementB.ToSystemVector2(), out var t, out var normal);
+            _distance = t;
+            _time = t;
 
             base.Update(gameTime);
         }
@@ -233,12 +241,12 @@ namespace MonoGameExample
         private ColliderTarget DetermineTarget(Point mousePosition)
         {
             var mouseTransform = new Transform(mousePosition.ToVector2().ToSystemVector2(), 0);
-            if (Collision.Intersection(_pointer, mouseTransform, _colliderA, TransformA))
+            if (Collision.Intersection(_pointer, mouseTransform, _colliderA, TransformAWithCurrentMovement))
             {
                 return ColliderTarget.A;
             }
 
-            if (Collision.Intersection(_pointer, mouseTransform, _colliderB, TransformB))
+            if (Collision.Intersection(_pointer, mouseTransform, _colliderB, TransformBWithCurrentMovement))
             {
                 return ColliderTarget.B;
             }
@@ -255,9 +263,7 @@ namespace MonoGameExample
         {
             GraphicsDevice.Clear(_bgColor);
 
-            // TODO: Add your drawing code here
             _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
-
 
             DrawUI(gameTime);
 
@@ -418,9 +424,10 @@ namespace MonoGameExample
             //     Color.LightGray, 0, Vector2.Zero, 2,
             //     SpriteEffects.None, 0);
             const int ratioBarThickness = 10;
+            var lineColor = Ratio > _time ? Color.Yellow : Color.LightGray;
             var barStart = new Vector2(0, _logicalSize.Y - ratioBarThickness);
             var barEnd = new Vector2(_logicalSize.X * Ratio, _logicalSize.Y - ratioBarThickness);
-            _spriteBatch.DrawLine(barStart, barEnd, Color.LightGray, ratioBarThickness);
+            _spriteBatch.DrawLine(barStart, barEnd, lineColor, ratioBarThickness);
         }
 
         private Vector2 MinkowskiDifferenceOrigin => _logicalSize.ToVector2() / 2;
@@ -430,15 +437,14 @@ namespace MonoGameExample
             // B-A
             var bSubAOrigin = MinkowskiDifferenceOrigin;
             DrawMinkowskiDifference(_colliderA, TransformA, _colliderB, TransformB,
-                (_movementA - _movementB).ToSystemVector2(),
                 bSubAOrigin, _isCollide ? ColorCollision : ColorBSubA);
 
             // Distance
-            _spriteBatch.DrawString(_defaultFont, $"Distance: {_distance}", new Vector2(16, _logicalSize.Y - 32),
+            _spriteBatch.DrawString(_defaultFont, $"Distance: {_distance}", new Vector2(16, _logicalSize.Y - 36),
                 Color.White, 0, Vector2.Zero, 4, SpriteEffects.None, 0);
 
             // Counter
-            _spriteBatch.DrawString(_defaultFont, $"k: {DebugDraw.IterationCounter}", new Vector2(16, _logicalSize.Y - 64),
+            _spriteBatch.DrawString(_defaultFont, $"k: {DebugDraw.IterationCounter}", new Vector2(16, _logicalSize.Y - 68),
                 Color.White, 0, Vector2.Zero, 4, SpriteEffects.None, 0);
             if (DebugDraw.IterationCounter > 60000)
             {
