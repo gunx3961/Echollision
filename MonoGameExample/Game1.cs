@@ -228,12 +228,12 @@ namespace MonoGameExample
                     break;
             }
 
-            _isCollide = Collision.Intersection(_colliderA, TransformA, _colliderB, TransformB);
-            _distance = Collision.Distance(_colliderA, TransformA, _colliderB, TransformB);
-            // _isCollide = Collision.Continuous(_colliderA, TransformA, _movementA.ToSystemVector2(), _colliderB,
-            //     TransformB, _movementB.ToSystemVector2(), out var t, out var normal);
-            // _distance = t;
-            // _time = t;
+            // _isCollide = Collision.Intersection(_colliderA, TransformA, _colliderB, TransformB);
+            // _distance = Collision.Distance(_colliderA, TransformA, _colliderB, TransformB);
+            _isCollide = Collision.Continuous(_colliderA, TransformA, _movementA.ToSystemVector2(), _colliderB,
+            TransformB, _movementB.ToSystemVector2(), out var t, out var normal);
+            _distance = t;
+            _time = t;
 
             base.Update(gameTime);
         }
@@ -415,74 +415,111 @@ namespace MonoGameExample
             _spriteBatch.DrawLine(barStart, barEnd, lineColor, ratioBarThickness);
         }
 
-        private Vector2 MinkowskiDifferenceOrigin => _logicalSize.ToVector2() / 2;
+        private Vector2 DebugOrigin => _logicalSize.ToVector2() / 2;
 
         private void DrawDebug(GameTime gameTime)
         {
             // B-A
-            var bSubAOrigin = MinkowskiDifferenceOrigin;
+            var debugOrigin = DebugOrigin;
             DrawMinkowskiDifference(_colliderA, TransformA, _colliderB, TransformB,
-                bSubAOrigin, _isCollide ? ColorCollision : ColorBSubA);
+                debugOrigin, _isCollide ? ColorCollision : ColorBSubA);
 
             // Distance
-            _spriteBatch.DrawString(_defaultFont, $"Distance: {_distance}", new Vector2(16, _logicalSize.Y - 36),
+            _spriteBatch.DrawString(_defaultFont, $"Distance: {_distance.ToString()}", new Vector2(16, _logicalSize.Y - 36),
                 Color.White, 0, Vector2.Zero, 4, SpriteEffects.None, 0);
 
             // Counter
-            _spriteBatch.DrawString(_defaultFont, $"k: {DebugDraw.IterationCounter}", new Vector2(16, _logicalSize.Y - 68),
+            _spriteBatch.DrawString(_defaultFont, $"k: {DebugDraw.IterationCounter.ToString()}", new Vector2(16, _logicalSize.Y - 68),
                 Color.White, 0, Vector2.Zero, 4, SpriteEffects.None, 0);
             if (DebugDraw.IterationCounter > 60000)
             {
-                System.Diagnostics.Debug.WriteLine($"PositionA: new Vector2({PositionA.X}, {PositionA.Y})");
-                System.Diagnostics.Debug.WriteLine($"PositionB: new Vector2({PositionB.X}, {PositionB.Y})");
+                System.Diagnostics.Debug.WriteLine($"PositionA: new Vector2({PositionA.X.ToString()}, {PositionA.Y.ToString()})");
+                System.Diagnostics.Debug.WriteLine($"PositionB: new Vector2({PositionB.X.ToString()}, {PositionB.Y.ToString()})");
             }
 
             // Debug draws
             for (var i = 0; i < DebugDraw.DebugLines.Count; i += 2)
             {
-                _spriteBatch.DrawLine(DebugDraw.DebugLines[i].ToXnaVector2() + bSubAOrigin,
-                    DebugDraw.DebugLines[i + 1].ToXnaVector2() + bSubAOrigin, Color.Green);
+                _spriteBatch.DrawLine(DebugDraw.DebugLines[i].ToXnaVector2() + debugOrigin,
+                    DebugDraw.DebugLines[i + 1].ToXnaVector2() + debugOrigin, Color.Green);
             }
 
             for (var i = 0; i < DebugDraw.DebugPoints.Count; i += 1)
             {
-                DrawCross(DebugDraw.DebugPoints[i].ToXnaVector2() + bSubAOrigin, Color.LightGreen);
+                DrawCross(DebugDraw.DebugPoints[i].ToXnaVector2() + debugOrigin, Color.LightGreen);
             }
 
 
             for (var i = 0; i < DebugDraw.DebugStrings.Count; i += 1)
             {
                 _spriteBatch.DrawString(_defaultFont, DebugDraw.DebugStrings[i].Item1,
-                    DebugDraw.DebugStrings[i].Item2.ToXnaVector2() + bSubAOrigin + new Vector2(2, 2), Color.LightGreen);
+                    DebugDraw.DebugStrings[i].Item2.ToXnaVector2() + debugOrigin + new Vector2(2, 2), Color.LightGreen);
             }
 
-            if (DebugDraw.DebugSimplexes.Count == 0) return;
-            var simplexIndex = Math.Clamp(_debugCursor, 0, DebugDraw.DebugSimplexes.Count - 1);
-            var (simplexVertexCount, w, v, newW) = DebugDraw.DebugSimplexes[simplexIndex];
-            switch (simplexVertexCount)
+            // GJK procedures
+            if (DebugDraw.GjkProcedure.Count > 0)
             {
-                case 1:
-                    _spriteBatch.DrawPoint(v.ToXnaVector2() + bSubAOrigin, Color.Yellow, size: 5f);
-                    _spriteBatch.DrawPoint(newW.ToXnaVector2() + bSubAOrigin, Color.Red, size: 5f);
-                    break;
+                var procedureIndex = Math.Clamp(_debugCursor, 0, DebugDraw.GjkProcedure.Count - 1);
+                var (simplexVertexCount, w, v, newW) = DebugDraw.GjkProcedure[procedureIndex];
+                switch (simplexVertexCount)
+                {
+                    case 1:
+                        _spriteBatch.DrawPoint(v.ToXnaVector2() + debugOrigin, Color.Yellow, size: 5f);
+                        _spriteBatch.DrawPoint(newW.ToXnaVector2() + debugOrigin, Color.Red, size: 5f);
+                        break;
+    
+                    case 2:
+                        _spriteBatch.DrawLine(w[0].ToXnaVector2() + debugOrigin, w[1].ToXnaVector2() + debugOrigin,
+                            Color.Yellow);
+                        _spriteBatch.DrawPoint(v.ToXnaVector2() + debugOrigin, Color.Yellow, size: 5f);
+                        _spriteBatch.DrawPoint(newW.ToXnaVector2() + debugOrigin, Color.Red, size: 5f);
+                        break;
+    
+                    case 3:
+                        _spriteBatch.DrawLine(w[0].ToXnaVector2() + debugOrigin, w[1].ToXnaVector2() + debugOrigin,
+                            Color.Yellow);
+                        _spriteBatch.DrawLine(w[1].ToXnaVector2() + debugOrigin, w[2].ToXnaVector2() + debugOrigin,
+                            Color.Yellow);
+                        _spriteBatch.DrawLine(w[2].ToXnaVector2() + debugOrigin, w[0].ToXnaVector2() + debugOrigin,
+                            Color.Yellow);
+                        _spriteBatch.DrawPoint(v.ToXnaVector2() + debugOrigin, Color.Yellow, size: 5f);
+                        _spriteBatch.DrawPoint(newW.ToXnaVector2() + debugOrigin, Color.Red, size: 5f);
+                        break;
+                }
+            }
+            
+            // GJK Ray Cast procedures
+            if (DebugDraw.GjkRayCastProcedure.Count > 0)
+            {
+                var procedureIndex = Math.Clamp(_debugCursor, 0, DebugDraw.GjkRayCastProcedure.Count - 1);
+                var (x, p, vertexCount, setX, v) = DebugDraw.GjkRayCastProcedure[procedureIndex];
+                // _spriteBatch.DrawString(_defaultFont, "x", x.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
+                //     Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
+                _spriteBatch.DrawString(_defaultFont, "p", p.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
+                    Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
+                _spriteBatch.DrawLine(x.ToXnaVector2() + debugOrigin, p.ToXnaVector2() + debugOrigin, Color.Yellow);
 
-                case 2:
-                    _spriteBatch.DrawLine(w[0].ToXnaVector2() + bSubAOrigin, w[1].ToXnaVector2() + bSubAOrigin,
-                        Color.Yellow);
-                    _spriteBatch.DrawPoint(v.ToXnaVector2() + bSubAOrigin, Color.Yellow, size: 5f);
-                    _spriteBatch.DrawPoint(newW.ToXnaVector2() + bSubAOrigin, Color.Red, size: 5f);
-                    break;
-
-                case 3:
-                    _spriteBatch.DrawLine(w[0].ToXnaVector2() + bSubAOrigin, w[1].ToXnaVector2() + bSubAOrigin,
-                        Color.Yellow);
-                    _spriteBatch.DrawLine(w[1].ToXnaVector2() + bSubAOrigin, w[2].ToXnaVector2() + bSubAOrigin,
-                        Color.Yellow);
-                    _spriteBatch.DrawLine(w[2].ToXnaVector2() + bSubAOrigin, w[0].ToXnaVector2() + bSubAOrigin,
-                        Color.Yellow);
-                    _spriteBatch.DrawPoint(v.ToXnaVector2() + bSubAOrigin, Color.Yellow, size: 5f);
-                    _spriteBatch.DrawPoint(newW.ToXnaVector2() + bSubAOrigin, Color.Red, size: 5f);
-                    break;
+                var vInCsoSystem = (x - v).ToXnaVector2();
+                _spriteBatch.DrawString(_defaultFont, "v", vInCsoSystem + debugOrigin + new Vector2(2, 2),
+                    Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
+                _spriteBatch.DrawLine(x.ToXnaVector2() + debugOrigin, vInCsoSystem + debugOrigin, Color.MediumPurple);
+                
+                switch (vertexCount)
+                {
+                    case 2:
+                        _spriteBatch.DrawLine(setX[0].ToXnaVector2() + debugOrigin, setX[1].ToXnaVector2() + debugOrigin,
+                            Color.White);
+                        break;
+    
+                    case 3:
+                        _spriteBatch.DrawLine(setX[0].ToXnaVector2() + debugOrigin, setX[1].ToXnaVector2() + debugOrigin,
+                            Color.White);
+                        _spriteBatch.DrawLine(setX[1].ToXnaVector2() + debugOrigin, setX[2].ToXnaVector2() + debugOrigin,
+                            Color.White);
+                        _spriteBatch.DrawLine(setX[2].ToXnaVector2() + debugOrigin, setX[0].ToXnaVector2() + debugOrigin,
+                            Color.White);
+                        break;
+                }
             }
         }
     }

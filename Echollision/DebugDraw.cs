@@ -11,15 +11,19 @@ namespace ViLAWAVE.Echollision
         public static readonly List<Tuple<string, Vector2>> DebugStrings = new List<Tuple<string, Vector2>>();
         public static int IterationCounter { get; private set; } = 0;
 
-        public static readonly List<Tuple<int, Vector2[], Vector2, Vector2>> DebugSimplexes =
+        public static readonly List<Tuple<int, Vector2[], Vector2, Vector2>> GjkProcedure =
             new List<Tuple<int, Vector2[], Vector2, Vector2>>();
+
+        public static readonly List<Tuple<Vector2, Vector2, int, Vector2[], Vector2>> GjkRayCastProcedure =
+            new List<Tuple<Vector2, Vector2, int, Vector2[], Vector2>>();
 
         internal static void Clear()
         {
             DebugPoints.Clear();
             DebugLines.Clear();
             DebugStrings.Clear();
-            DebugSimplexes.Clear();
+            GjkProcedure.Clear();
+            GjkRayCastProcedure.Clear();
             IterationCounter = 0;
         }
 
@@ -47,9 +51,16 @@ namespace ViLAWAVE.Echollision
         //     _debugPoints.Add(ratioPoint.ToXnaVector2());
         // }
 
-        internal static void DrawGjkIteration(int vertexCount, Span<Vector2> w, Vector2 v, Vector2 newW)
+        internal static void DrawGjkProcedure(int vertexCount, Span<Vector2> w, Vector2 v, Vector2 newW)
         {
-            DebugSimplexes.Add(new Tuple<int, Vector2[], Vector2, Vector2>(vertexCount, w.ToArray(), v, newW));
+            GjkProcedure.Add(new Tuple<int, Vector2[], Vector2, Vector2>(vertexCount, w.ToArray(), v, newW));
+        }
+
+        internal static void DrawGjkRayCastProcedure(Vector2 x, Vector2 p, int vertexCount, Span<Vector2> setX,
+            Vector2 v)
+        {
+            GjkRayCastProcedure.Add(
+                new Tuple<Vector2, Vector2, int, Vector2[], Vector2>(x, p, vertexCount, setX.ToArray(), v));
         }
 
         internal static void UpdateIterationCounter(int count)

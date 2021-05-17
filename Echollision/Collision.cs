@@ -87,7 +87,7 @@ namespace ViLAWAVE.Echollision
                 }
 
 #if DEBUG_DRAW
-                DebugDraw.DrawGjkIteration(wCount, setW, v, w);
+                DebugDraw.DrawGjkProcedure(wCount, setW, v, w);
                 DebugDraw.DrawPoint(v);
                 DebugDraw.DrawString($"v{k}", v);
 #endif
@@ -302,7 +302,7 @@ namespace ViLAWAVE.Echollision
             out float t, out Vector2 normal
         )
         {
-            var ray = translationA - translationB;
+            var ray = translationB - translationA;
             t = 0f; // Hit parameter a.k.a lambda a.k.a. time
             var x = Vector2.Zero; // Source is the origin
             normal = Vector2.Zero;
@@ -327,11 +327,6 @@ namespace ViLAWAVE.Echollision
                 k += 1;
                 int i;
 
-#if DEBUG_DRAW
-                DebugDraw.DrawString($"x{k - 1}", x);
-                DebugDraw.DrawPoint(x);
-#endif
-
                 // Termination
                 var vLengthSquared = v.LengthSquared();
                 var maxPxLengthSquared = 0f;
@@ -345,6 +340,12 @@ namespace ViLAWAVE.Echollision
 
                 var p = a.WorldSupport(transformA, v) - b.WorldSupport(transformB, -v);
                 var w = x - p;
+                
+#if DEBUG_DRAW
+                DebugDraw.DrawString($"x{(k - 1).ToString()}", x);
+                DebugDraw.DrawPoint(x);
+                DebugDraw.DrawGjkRayCastProcedure(x, p, pCount, setP, v);
+#endif
 
                 var vDotW = Vector2.Dot(v, w);
                 if (vDotW > 0f)
@@ -363,7 +364,7 @@ namespace ViLAWAVE.Echollision
                 v = Vector2.Zero;
                 for (i = 0; i < pCount; i += 1)
                 {
-                    v += lambda[i] * setP[i];
+                    v -= lambda[i] * setP[i];
                     // get P from {x} − Y 
                     setP[i] = x - setP[i];
                 }
