@@ -228,12 +228,12 @@ namespace MonoGameExample
                     break;
             }
 
-            // _isCollide = Collision.Intersection(_colliderA, TransformA, _colliderB, TransformB);
-            // _distance = Collision.Distance(_colliderA, TransformA, _colliderB, TransformB);
-            _isCollide = Collision.Continuous(_colliderA, TransformA, _movementA.ToSystemVector2(), _colliderB,
-                TransformB, _movementB.ToSystemVector2(), out var t, out var normal);
-            _distance = t;
-            _time = t;
+            _isCollide = Collision.Intersection(_colliderA, TransformA, _colliderB, TransformB);
+            _distance = Collision.Distance(_colliderA, TransformA, _colliderB, TransformB);
+            // _isCollide = Collision.Continuous(_colliderA, TransformA, _movementA.ToSystemVector2(), _colliderB,
+            //     TransformB, _movementB.ToSystemVector2(), out var t, out var normal);
+            // _distance = t;
+            // _time = t;
 
             base.Update(gameTime);
         }
@@ -318,22 +318,7 @@ namespace MonoGameExample
             var samples = _sampleNormals.Span;
             for (var i = 0; i < samples.Length; i += 1)
             {
-                var support = Collision.SupportOfMinkowskiDifference(a, ta, b, tb, samples[i]);
-                var worldPosition = new Vector2(support.X, support.Y) + originAt;
-                samplePoints[i] = worldPosition;
-            }
-
-            DrawShapeOfSamplePoints(samplePoints, color);
-        }
-
-        private void DrawMinkowskiDifference(ICollider a, Transform ta, ICollider b, Transform tb,
-            SystemVector2 relativeMovement, Vector2 originAt, Color color)
-        {
-            Span<Vector2> samplePoints = stackalloc Vector2[_sampleNormals.Length];
-            var samples = _sampleNormals.Span;
-            for (var i = 0; i < samples.Length; i += 1)
-            {
-                var support = Collision.SupportOfMinkowskiDifference(a, ta, b, tb, relativeMovement, samples[i]);
+                var support = a.WorldSupport(ta, samples[i]) - b.WorldSupport(tb, -samples[i]);
                 var worldPosition = new Vector2(support.X, support.Y) + originAt;
                 samplePoints[i] = worldPosition;
             }
@@ -397,7 +382,7 @@ namespace MonoGameExample
                 SpriteEffects.None, 0);
 
             stringPosition += new Vector2(0, _defaultFont.LineSpacing * 2);
-            _spriteBatch.DrawString(_defaultFont, "# Minkowski Difference B-A", stringPosition, ColorBSubA, 0,
+            _spriteBatch.DrawString(_defaultFont, "# Minkowski Difference A-B", stringPosition, ColorBSubA, 0,
                 Vector2.Zero, 2,
                 SpriteEffects.None, 0);
 

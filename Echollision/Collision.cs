@@ -34,7 +34,7 @@ namespace ViLAWAVE.Echollision
 #endif
 
             // Pick arbitrary support point as initial v
-            var v = SupportOfMinkowskiDifference(a, transformA, b, transformB, Vector2.UnitX);
+            var v = a.WorldSupport(transformA, Vector2.UnitX) - b.WorldSupport(transformB, -Vector2.UnitX);
 
             Span<Vector2> setW = stackalloc Vector2[3];
             var wCount = 0;
@@ -45,7 +45,7 @@ namespace ViLAWAVE.Echollision
             while (k < 65535)
             {
                 k += 1;
-                var w = SupportOfMinkowskiDifference(a, transformA, b, transformB, -v);
+                var w = a.WorldSupport(transformA, -v) - b.WorldSupport(transformB, v);
 
 #if DEBUG_DRAW
                 var negativeVDirection = Vector2.Normalize(-v) * 100;
@@ -308,7 +308,7 @@ namespace ViLAWAVE.Echollision
             normal = Vector2.Zero;
 
             // Initial v = x − “arbitrary point in C”
-            var v = -SupportOfMinkowskiDifference(a, transformA, b, transformB, Vector2.UnitX);
+            var v = -(a.WorldSupport(transformA, Vector2.UnitX) - b.WorldSupport(transformB, -Vector2.UnitX));
 
 #if DEBUG_DRAW
             DebugDraw.Clear();
@@ -343,7 +343,7 @@ namespace ViLAWAVE.Echollision
 
                 if (vLengthSquared <= Tolerance * maxPxLengthSquared) break;
 
-                var p = SupportOfMinkowskiDifference(a, transformA, b, transformB, v);
+                var p = a.WorldSupport(transformA, v) - b.WorldSupport(transformB, -v);
                 var w = x - p;
 
                 var vDotW = Vector2.Dot(v, w);
@@ -394,15 +394,14 @@ namespace ViLAWAVE.Echollision
             if (v0 == Vector2.Zero) v0 = new Vector2(0.00001f, 0);
 
             var normal = Vector2.Normalize(-v0);
-
-
-            var v1 = SupportOfMinkowskiDifference(a, transformA, b, transformB, normal);
+            
+            var v1 = b.WorldSupport(transformB, normal) - a.WorldSupport(transformA, -normal);
 
             normal = Vector2.Normalize(v1 - v0);
             normal = new Vector2(normal.Y, -normal.X);
             if (Vector2.Dot(-v0, normal) < 0) normal = -normal;
 
-            var v2 = SupportOfMinkowskiDifference(a, transformA, b, transformB, normal);
+            var v2 = b.WorldSupport(transformB, normal) - a.WorldSupport(transformA, -normal);
 
 #if DEBUG_DRAW
             DebugDraw.Clear();
@@ -436,7 +435,7 @@ namespace ViLAWAVE.Echollision
 
                 if (Vector2.Dot(normal, -v1) < 0) return true;
 
-                var v3 = SupportOfMinkowskiDifference(a, transformA, b, transformB, normal);
+                var v3 = b.WorldSupport(transformB, normal) - a.WorldSupport(transformA, -normal);
 #if DEBUG_DRAW
                 DebugDraw.DrawLine(v0, v3);
 #endif
@@ -478,42 +477,11 @@ namespace ViLAWAVE.Echollision
             var supportWorld = Vector2.Transform(supportLocal, rotation) + transform.Translation;
             return supportWorld;
         }
-
-        public static Vector2 WorldSupport(this ICollider shape, in Transform transform, Vector2 movement,
-            Vector2 normal)
-        {
-            var movementSupport = Vector2.Dot(movement, normal) > 0 ? movement : Vector2.Zero;
-            var shapeSupport = shape.WorldSupport(transform, normal);
-            return shapeSupport + movementSupport;
-        }
-
-        public static Vector2 WorldCenter(this ICollider shape, in Transform transform)
+        
+        private static Vector2 WorldCenter(this ICollider shape, in Transform transform)
         {
             var rotation = Matrix3x2.CreateRotation(transform.Rotation);
             return Vector2.Transform(shape.Center, rotation) + transform.Translation;
-        }
-
-        public static Vector2 WorldCenter(this ICollider shape, in Transform transform, Vector2 movement)
-        {
-            return shape.WorldCenter(transform) + (movement / 2f);
-        }
-
-        public static Vector2 SupportOfMinkowskiDifference(
-            ICollider a, in Transform ta,
-            ICollider b, in Transform tb,
-            Vector2 normal
-        )
-        {
-            return b.WorldSupport(tb, normal) - a.WorldSupport(ta, -normal);
-        }
-
-        public static Vector2 SupportOfMinkowskiDifference(
-            ICollider a, in Transform ta,
-            ICollider b, in Transform tb,
-            Vector2 relativeMovement, Vector2 normal
-        )
-        {
-            return b.WorldSupport(tb, normal) - a.WorldSupport(ta, relativeMovement, -normal);
         }
     }
 }
