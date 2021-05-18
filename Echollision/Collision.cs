@@ -13,18 +13,19 @@ namespace ViLAWAVE.Echollision
         private const float RelativeErrorBound = 0.001f; // 0.1%
 
         /// <summary>
-        /// Distance query via GJK
+        /// Distance query.
         /// </summary>
-        /// <param name="a"></param>
-        /// <param name="transformA"></param>
-        /// <param name="b"></param>
-        /// <param name="transformB"></param>
-        /// <returns>Distance</returns>
+        /// <param name="a">Object A.</param>
+        /// <param name="transformA">The transform of object A.</param>
+        /// <param name="b">Object B.</param>
+        /// <param name="transformB">The transform of object B.</param>
+        /// <returns>The distance between two objects.</returns>
         public static float Distance(
             ICollider a, in Transform transformA,
             ICollider b, in Transform transformB
         )
         {
+            // Distance query via GJK distance algorithm with Signed Volumes distance sub-algorithm
             var k = 0;
 
 #if DEBUG_DRAW
@@ -295,13 +296,23 @@ namespace ViLAWAVE.Echollision
         /// <summary>
         /// Continuous collision detection.<br/>
         /// </summary>
-        /// <returns>Time of collision.</returns>
+        /// <param name="a">Object A.</param>
+        /// <param name="transformA">The transform of object A.</param>
+        /// <param name="translationA">The movement will be applied to object A.</param>
+        /// <param name="b">Object B.</param>
+        /// <param name="transformB">The transform of object B.</param>
+        /// <param name="translationB">The movement will be applied to object B.</param>
+        /// <param name="t">Hit parameter a.k.a. time.</param>
+        /// <param name="normal">Normal at hit point.</param>
+        /// <returns>Whether will collide.</returns>
         public static bool Continuous(
             ICollider a, in Transform transformA, Vector2 translationA,
             ICollider b, in Transform transformB, Vector2 translationB,
             out float t, out Vector2 normal
         )
         {
+            // Continuous a.k.a. priori collision detection via GJK Ray Cast
+            
             var ray = translationB - translationA;
             t = 0f; // Hit parameter a.k.a lambda a.k.a. time
             var x = Vector2.Zero; // Source is the origin
@@ -381,18 +392,20 @@ namespace ViLAWAVE.Echollision
         }
 
         /// <summary>
-        /// Intersection detection via MPR
+        /// Intersection detection.
         /// </summary>
-        /// <param name="a"></param>
-        /// <param name="transformA"></param>
-        /// <param name="b"></param>
-        /// <param name="transformB"></param>
-        /// <returns>Intersection</returns>
+        /// <param name="a">Object A.</param>
+        /// <param name="transformA">The transform of object A.</param>
+        /// <param name="b">Object B.</param>
+        /// <param name="transformB">The transform of object B.</param>
+        /// <returns>Whether two objects intersect.</returns>
         public static bool Intersection(
             ICollider a, in Transform transformA,
             ICollider b, in Transform transformB
         )
         {
+            // Intersection detection via MPR 
+            
             var centerA = a.WorldCenter(transformA);
             var centerB = b.WorldCenter(transformB);
             var v0 = centerB - centerA;
