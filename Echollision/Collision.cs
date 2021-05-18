@@ -317,7 +317,7 @@ namespace ViLAWAVE.Echollision
             DebugDraw.DrawString("ray", ray);
             DebugDraw.DrawLine(Vector2.Zero, ray);
 #endif
-
+            
             Span<Vector2> setP = stackalloc Vector2[3];
             var pCount = 0;
             Span<float> lambda = stackalloc float[3];
@@ -342,8 +342,6 @@ namespace ViLAWAVE.Echollision
                 var w = x - p;
                 
 #if DEBUG_DRAW
-                DebugDraw.DrawString($"x{(k - 1).ToString()}", x);
-                DebugDraw.DrawPoint(x);
                 DebugDraw.DrawGjkRayCastProcedure(x, p, pCount, setP, v);
 #endif
 
@@ -353,18 +351,24 @@ namespace ViLAWAVE.Echollision
                     var vDotR = Vector2.Dot(v, ray);
                     if (vDotR >= 0f) return false;
                     t = t - vDotW / vDotR;
+                    // Of course
+                    if (t > 1f) return false;
                     x = t * ray;
                     normal = v;
                 }
 
                 // Be careful to compute v(conv({x} − Y))
+                for (i = 0; i < pCount; i += 1)
+                {
+                    setP[i] = x - setP[i];
+                }
                 setP[pCount] = x - p;
                 pCount += 1;
                 DistanceSv(ref setP, ref lambda, ref pCount);
                 v = Vector2.Zero;
                 for (i = 0; i < pCount; i += 1)
                 {
-                    v -= lambda[i] * setP[i];
+                    v += lambda[i] * setP[i];
                     // get P from {x} − Y 
                     setP[i] = x - setP[i];
                 }

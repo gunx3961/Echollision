@@ -15,7 +15,7 @@ namespace MonoGameExample
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
         private readonly Color _bgColor = new Color(30, 30, 30);
-        private Point _logicalSize = new Point(1280, 720);
+        private Point _logicalSize = new Point(1440, 840);
         private SpriteFont _defaultFont;
 
         private enum ControlMode
@@ -98,33 +98,33 @@ namespace MonoGameExample
             _sampleNormals = normals;
 
             _colliderA = new SphereCollider(100);
-            // _colliderA = new ConvexCollider(new SystemVector2[]
-            // {
-            //     new SystemVector2(-200, -100),
-            //     new SystemVector2(200, -100),
-            //     new SystemVector2(100, 100),
-            // });
+            _colliderA = new ConvexCollider(new SystemVector2[]
+            {
+            new SystemVector2(-200, -100),
+            new SystemVector2(200, -100),
+            new SystemVector2(100, 100),
+            });
 
-            // _colliderA = new ConvexHullCollider(new ICollider[]
-            // {
-            //     new SphereCollider(200),
-            //     new ConvexCollider(new SystemVector2[]
-            //     {
-            //         new SystemVector2(-200, -100),
-            //         new SystemVector2(200, -100),
-            //         new SystemVector2(100, 100),
-            //     })
-            // });
+            _colliderA = new ConvexHullCollider(new ICollider[]
+            {
+            new SphereCollider(200),
+            new ConvexCollider(new SystemVector2[]
+            {
+            new SystemVector2(-200, -100),
+            new SystemVector2(200, -100),
+            new SystemVector2(100, 100),
+            })
+            });
 
-            _colliderB = new SphereCollider(200);
+            // _colliderB = new SphereCollider(200);
             // _colliderB = new SphereCollider(0);
-            // _colliderB = new ConvexCollider(new SystemVector2[]
-            // {
-            //     new SystemVector2(-100, -100),
-            //     new SystemVector2(100, -100),
-            //     new SystemVector2(100, 100),
-            //     new SystemVector2(-100, 100)
-            // });
+            _colliderB = new ConvexCollider(new SystemVector2[]
+            {
+            new SystemVector2(-100, -100),
+            new SystemVector2(100, -100),
+            new SystemVector2(100, 100),
+            new SystemVector2(-100, 100)
+            });
 
             base.Initialize();
         }
@@ -493,8 +493,8 @@ namespace MonoGameExample
             {
                 var procedureIndex = Math.Clamp(_debugCursor, 0, DebugDraw.GjkRayCastProcedure.Count - 1);
                 var (x, p, vertexCount, setX, v) = DebugDraw.GjkRayCastProcedure[procedureIndex];
-                // _spriteBatch.DrawString(_defaultFont, "x", x.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
-                //     Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
+                _spriteBatch.DrawString(_defaultFont, "x", x.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
+                Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
                 _spriteBatch.DrawString(_defaultFont, "p", p.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
                     Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
                 _spriteBatch.DrawLine(x.ToXnaVector2() + debugOrigin, p.ToXnaVector2() + debugOrigin, Color.Yellow);
