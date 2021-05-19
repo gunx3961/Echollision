@@ -1,5 +1,5 @@
 # Echollision
-Hybird 2D collision detection for .NET platforms.
+Hybrid 2D collision detection for .NET platforms.
 
 ## Features
 - Any collider shape.
