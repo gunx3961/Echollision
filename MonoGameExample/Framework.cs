@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGame.Extended.Input;
 
 namespace MonoGameExample
 {
@@ -10,6 +11,10 @@ namespace MonoGameExample
         public readonly ScreenManager ScreenManager;
 
         private readonly GraphicsDeviceManager _graphics;
+        
+        // Input
+        public MouseStateExtended MouseState { get; private set; }
+        public KeyboardStateExtended KeyboardState { get; private set; }
 
         public Framework()
         {
@@ -32,17 +37,17 @@ namespace MonoGameExample
 
             base.Initialize();
             
-            ScreenManager.LaunchNarrowPhase();
+            ScreenManager.LaunchMainMenu();
         }
 
         protected override void Update(GameTime gameTime)
         {
+            // Framework update first
+            KeyboardState = KeyboardExtended.GetState();
+            MouseState = MouseExtended.GetState();
+            
+            // Here the component updates go 
             base.Update(gameTime);
-        }
-
-        protected override void Draw(GameTime gameTime)
-        {
-            base.Draw(gameTime);
         }
     }
 }

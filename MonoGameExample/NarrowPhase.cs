@@ -31,7 +31,6 @@ namespace MonoGameExample
         {
         }
         
-        private SpriteFont _defaultFont;
         private readonly Color _bgColor = new Color(30, 30, 30);
 
         private ControlMode _controlMode = ControlMode.None;
@@ -137,56 +136,54 @@ namespace MonoGameExample
 
             _pixel = new Texture2D(SpriteBatch.GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
             _pixel.SetData(new[] {Color.White});
-            _defaultFont = Game.Content.Load<SpriteFont>("04B09");
         }
 
         public override void Update(GameTime gameTime)
         {
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed ||
-                Keyboard.GetState().IsKeyDown(Keys.Escape))
-                Game.Exit();
-
+            if (Framework.KeyboardState.WasKeyJustDown(Keys.Escape))
+            {
+                Framework.ScreenManager.LaunchMainMenu();
+            }
+                
             // Debug cursor
-            var keyboardState = KeyboardExtended.GetState();
-            if (keyboardState.WasKeyJustDown(Keys.R)) _debugCursor = 0;
+            if (Framework.KeyboardState.WasKeyJustDown(Keys.R)) _debugCursor = 0;
 
-            if (keyboardState.WasKeyJustDown(Keys.Left))
+            if (Framework.KeyboardState.WasKeyJustDown(Keys.Left))
             {
                 _debugCursor = Math.Clamp(_debugCursor - 1, 0, Int32.MaxValue);
             }
-            else if (keyboardState.WasKeyJustDown(Keys.Right))
+            else if (Framework.KeyboardState.WasKeyJustDown(Keys.Right))
             {
                 _debugCursor = Math.Clamp(_debugCursor + 1, 0, Int32.MaxValue);
             }
 
             // Dump
-            if (keyboardState.WasKeyJustDown(Keys.T))
+            if (Framework.KeyboardState.WasKeyJustDown(Keys.T))
             {
                 System.Diagnostics.Debug.WriteLine($"PositionA: new Vector2({PositionA.X}, {PositionA.Y})");
                 System.Diagnostics.Debug.WriteLine($"PositionB: new Vector2({PositionB.X}, {PositionB.Y})");
             }
 
-            var mouseState = MouseExtended.GetState();
             switch (_controlMode)
             {
-                case ControlMode.None when mouseState.WasButtonJustDown(MouseButton.Left):
+                case ControlMode.None when Framework.MouseState.WasButtonJustDown(MouseButton.Left):
                     _controlMode = ControlMode.Movement;
-                    _colliderTarget = DetermineTarget(mouseState.Position);
-                    _controlAnchor = mouseState.Position;
+                    _colliderTarget = DetermineTarget(Framework.MouseState.Position);
+                    _controlAnchor = Framework.MouseState.Position;
                     break;
-                case ControlMode.None when mouseState.WasButtonJustDown(MouseButton.Middle):
+                case ControlMode.None when Framework.MouseState.WasButtonJustDown(MouseButton.Middle):
                     _controlMode = ControlMode.Position;
-                    _colliderTarget = DetermineTarget(mouseState.Position);
-                    _controlAnchor = mouseState.Position;
+                    _colliderTarget = DetermineTarget(Framework.MouseState.Position);
+                    _controlAnchor = Framework.MouseState.Position;
                     break;
-                case ControlMode.None when mouseState.WasButtonJustDown(MouseButton.Right):
+                case ControlMode.None when Framework.MouseState.WasButtonJustDown(MouseButton.Right):
                     _controlMode = ControlMode.Ratio;
-                    _controlAnchor = mouseState.Position;
+                    _controlAnchor = Framework.MouseState.Position;
                     break;
 
-                case ControlMode.Movement when mouseState.WasButtonJustUp(MouseButton.Left):
-                case ControlMode.Position when mouseState.WasButtonJustUp(MouseButton.Middle):
-                case ControlMode.Ratio when mouseState.WasButtonJustUp(MouseButton.Right):
+                case ControlMode.Movement when Framework.MouseState.WasButtonJustUp(MouseButton.Left):
+                case ControlMode.Position when Framework.MouseState.WasButtonJustUp(MouseButton.Middle):
+                case ControlMode.Ratio when Framework.MouseState.WasButtonJustUp(MouseButton.Right):
                     _controlMode = ControlMode.None;
                     _colliderTarget = ColliderTarget.None;
                     _controlAnchor = Point.Zero;
@@ -202,7 +199,7 @@ namespace MonoGameExample
                     break;
             }
 
-            var controlVector = (mouseState.Position - _controlAnchor).ToVector2();
+            var controlVector = (Framework.MouseState.Position - _controlAnchor).ToVector2();
 
             switch (_controlMode)
             {
@@ -236,8 +233,6 @@ namespace MonoGameExample
                 TransformB, _movementB.ToSystemVector2(), out var t, out var normal);
             _distance = t;
             _time = t;
-
-            base.Update(gameTime);
         }
 
         private ColliderTarget DetermineTarget(Point mousePosition)
@@ -265,7 +260,7 @@ namespace MonoGameExample
         {
             GraphicsDevice.Clear(_bgColor);
 
-            SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+            SpriteBatch.BeginPixelPerfect();
 
             DrawUI(gameTime);
 
@@ -282,7 +277,6 @@ namespace MonoGameExample
             DrawDebug(gameTime);
 
             SpriteBatch.End();
-            base.Draw(gameTime);
         }
 
         private Texture2D _pixel;
@@ -372,42 +366,42 @@ namespace MonoGameExample
             const string asciiTestString =
                 " !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 
-            SpriteBatch.DrawString(_defaultFont, asciiTestString, Vector2.Zero, Color.LightGray, 0, Vector2.Zero, 2,
+            SpriteBatch.DrawString(DefaultFont, asciiTestString, Vector2.Zero, Color.LightGray, 0, Vector2.Zero, 2,
                 SpriteEffects.None, 0);
 
-            var stringPosition = new Vector2(0, _defaultFont.LineSpacing * 4);
-            SpriteBatch.DrawString(_defaultFont, "# Shape A", stringPosition, ColorA, 0, Vector2.Zero, 2,
+            var stringPosition = new Vector2(0, DefaultFont.LineSpacing * 4);
+            SpriteBatch.DrawString(DefaultFont, "# Shape A", stringPosition, ColorA, 0, Vector2.Zero, 2,
                 SpriteEffects.None, 0);
 
-            stringPosition += new Vector2(0, _defaultFont.LineSpacing * 2);
-            SpriteBatch.DrawString(_defaultFont, "# Shape B", stringPosition, ColorB, 0, Vector2.Zero, 2,
+            stringPosition += new Vector2(0, DefaultFont.LineSpacing * 2);
+            SpriteBatch.DrawString(DefaultFont, "# Shape B", stringPosition, ColorB, 0, Vector2.Zero, 2,
                 SpriteEffects.None, 0);
 
-            stringPosition += new Vector2(0, _defaultFont.LineSpacing * 2);
-            SpriteBatch.DrawString(_defaultFont, "# Minkowski Difference A-B", stringPosition, ColorBSubA, 0,
+            stringPosition += new Vector2(0, DefaultFont.LineSpacing * 2);
+            SpriteBatch.DrawString(DefaultFont, "# Minkowski Difference A-B", stringPosition, ColorBSubA, 0,
                 Vector2.Zero, 2,
                 SpriteEffects.None, 0);
 
-            stringPosition += new Vector2(0, _defaultFont.LineSpacing * 2);
-            SpriteBatch.DrawString(_defaultFont, "# Collision", stringPosition, ColorCollision, 0, Vector2.Zero, 2,
+            stringPosition += new Vector2(0, DefaultFont.LineSpacing * 2);
+            SpriteBatch.DrawString(DefaultFont, "# Collision", stringPosition, ColorCollision, 0, Vector2.Zero, 2,
                 SpriteEffects.None, 0);
 
             var fps = Math.Ceiling(1.0 / gameTime.ElapsedGameTime.TotalSeconds);
             var fpsText = $"FPS:{fps.ToString()}";
-            stringPosition = new Vector2(Framework.LogicalSize.X, _defaultFont.LineSpacing * 6) -
-                             _defaultFont.MeasureString(fpsText) * 2f;
-            SpriteBatch.DrawString(_defaultFont, fpsText, stringPosition, Color.LightGray, 0, Vector2.Zero, 2,
+            stringPosition = new Vector2(Framework.LogicalSize.X, DefaultFont.LineSpacing * 6) -
+                             DefaultFont.MeasureString(fpsText) * 2f;
+            SpriteBatch.DrawString(DefaultFont, fpsText, stringPosition, Color.LightGray, 0, Vector2.Zero, 2,
                 SpriteEffects.None, 0);
 
             const string note = "@ ViLAWAVE.Echollision Hybrid Collision Detection";
-            var noteSize = _defaultFont.MeasureString(note);
-            SpriteBatch.DrawString(_defaultFont, note,
-                Framework.LogicalSize.ToVector2() - noteSize * 2 - new Vector2(0, _defaultFont.LineSpacing), Color.LightGray,
+            var noteSize = DefaultFont.MeasureString(note);
+            SpriteBatch.DrawString(DefaultFont, note,
+                Framework.LogicalSize.ToVector2() - noteSize * 2 - new Vector2(0, DefaultFont.LineSpacing), Color.LightGray,
                 0,
                 Vector2.Zero, 2, SpriteEffects.None, 0);
 
-            // var testSize = _defaultFont.MeasureString(asciiTestString);
-            // SpriteBatch.DrawString(_defaultFont, asciiTestString, Framework.LogicalSize.ToVector2() - testSize * 2,
+            // var testSize = DefaultFont.MeasureString(asciiTestString);
+            // SpriteBatch.DrawString(DefaultFont, asciiTestString, Framework.LogicalSize.ToVector2() - testSize * 2,
             //     Color.LightGray, 0, Vector2.Zero, 2,
             //     SpriteEffects.None, 0);
             const int ratioBarThickness = 10;
@@ -427,12 +421,12 @@ namespace MonoGameExample
                 debugOrigin, _isCollide ? ColorCollision : ColorBSubA);
 
             // Distance
-            SpriteBatch.DrawString(_defaultFont, $"Distance: {_distance.ToString()}",
+            SpriteBatch.DrawString(DefaultFont, $"Distance: {_distance.ToString()}",
                 new Vector2(16, Framework.LogicalSize.Y - 36),
                 Color.White, 0, Vector2.Zero, 4, SpriteEffects.None, 0);
 
             // Counter
-            SpriteBatch.DrawString(_defaultFont, $"k: {DebugDraw.IterationCounter.ToString()}",
+            SpriteBatch.DrawString(DefaultFont, $"k: {DebugDraw.IterationCounter.ToString()}",
                 new Vector2(16, Framework.LogicalSize.Y - 68),
                 Color.White, 0, Vector2.Zero, 4, SpriteEffects.None, 0);
             if (DebugDraw.IterationCounter > 60000)
@@ -458,7 +452,7 @@ namespace MonoGameExample
 
             for (var i = 0; i < DebugDraw.DebugStrings.Count; i += 1)
             {
-                SpriteBatch.DrawString(_defaultFont, DebugDraw.DebugStrings[i].Item1,
+                SpriteBatch.DrawString(DefaultFont, DebugDraw.DebugStrings[i].Item1,
                     DebugDraw.DebugStrings[i].Item2.ToXnaVector2() + debugOrigin + new Vector2(2, 2), Color.LightGreen);
             }
 
@@ -499,14 +493,14 @@ namespace MonoGameExample
             {
                 var procedureIndex = Math.Clamp(_debugCursor, 0, DebugDraw.GjkRayCastProcedure.Count - 1);
                 var (x, p, vertexCount, setX, v) = DebugDraw.GjkRayCastProcedure[procedureIndex];
-                SpriteBatch.DrawString(_defaultFont, "x", x.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
+                SpriteBatch.DrawString(DefaultFont, "x", x.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
                     Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
-                SpriteBatch.DrawString(_defaultFont, "p", p.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
+                SpriteBatch.DrawString(DefaultFont, "p", p.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
                     Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
                 SpriteBatch.DrawLine(x.ToXnaVector2() + debugOrigin, p.ToXnaVector2() + debugOrigin, Color.Yellow);
 
                 var vInCsoSystem = (x - v).ToXnaVector2();
-                SpriteBatch.DrawString(_defaultFont, "v", vInCsoSystem + debugOrigin + new Vector2(2, 2),
+                SpriteBatch.DrawString(DefaultFont, "v", vInCsoSystem + debugOrigin + new Vector2(2, 2),
                     Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
                 SpriteBatch.DrawLine(x.ToXnaVector2() + debugOrigin, vInCsoSystem + debugOrigin, Color.MediumPurple);
 

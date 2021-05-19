@@ -14,12 +14,25 @@ namespace MonoGameExample
 
         public void LaunchNarrowPhase()
         {
-            // TODO: Unload screen
+            LaunchScreen(new NarrowPhase(_framework));
+        }
+
+        public void LaunchMainMenu()
+        {
+            LaunchScreen(new MainMenu(_framework));
+        }
+
+        private void LaunchScreen(Screen screen)
+        {
+            // Unload previous screen
+            // TODO: unload properly
+            _framework.Components.Remove(_currentScreen);
             _currentScreen?.Dispose();
 
-            _currentScreen = new NarrowPhase(_framework);
+            _currentScreen = screen;
             _currentScreen.Initialize();
             _framework.Components.Add(_currentScreen);
+
         }
     }
 }
