@@ -92,12 +92,12 @@ namespace MonoGameExample
             foreach (var clickable in clickableSet)
             {
                 var transform = clickable.Get<Transform2D>().ToCollisionTransform();
-                var collider = clickable.Get<ICollider>();
+                var collider = clickable.Get<ConvexCollider>();
                 var hit = Collision.Intersection(collider, transform, pointCollider,
                     new Transform(mousePosition, 0f));
-                
+
                 if (!hit) continue;
-                
+
                 clickable.Get<Action>()();
                 break;
             }
