@@ -1,6 +1,5 @@
 using System;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.Input;
 
 namespace MonoGameExample
@@ -9,6 +8,7 @@ namespace MonoGameExample
     {
         public Point LogicalSize { get; private set; } = new Point(1440, 840);
         public readonly ScreenManager ScreenManager;
+        public readonly GlobalResource Resource;
 
         private readonly GraphicsDeviceManager _graphics;
         
@@ -24,6 +24,8 @@ namespace MonoGameExample
             TargetElapsedTime = TimeSpan.FromMilliseconds(1000f / 60);
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
+
+            Resource = new GlobalResource(this);
             
             ScreenManager = new ScreenManager(this);
             Components.Add(ScreenManager);
@@ -38,6 +40,11 @@ namespace MonoGameExample
             base.Initialize();
             
             ScreenManager.LaunchMainMenu();
+        }
+
+        protected override void LoadContent()
+        {
+            Resource.LoadContent();
         }
 
         protected override void Update(GameTime gameTime)
