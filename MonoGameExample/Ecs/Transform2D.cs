@@ -1,4 +1,4 @@
-using Microsoft.Xna.Framework;
+using System.Numerics;
 using ViLAWAVE.Echollision;
 
 namespace MonoGameExample.Ecs
@@ -10,7 +10,7 @@ namespace MonoGameExample.Ecs
 
         public Transform ToCollisionTransform()
         {
-            return new Transform(Position.ToSystemVector2(), Rotation);
+            return new Transform(Position, Rotation);
         }
     }
 }

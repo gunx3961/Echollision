@@ -27,7 +27,7 @@ namespace MonoGameExample
             _drawSystem = new DrawSystem(Framework, SpriteBatch, World);
 
             var narrowPhaseButton = World.CreateEntity();
-            narrowPhaseButton.Set(new Transform2D() {Position = new Vector2(160, 160)});
+            narrowPhaseButton.Set(new Transform2D() {Position = new System.Numerics.Vector2(160, 160)});
             var text = new Text() {Value = "Narrow Phase", Color = Color.LightGray, Scale = 7f};
             narrowPhaseButton.Set(text);
             var size = text.MeasureString(DefaultFont);
@@ -36,7 +36,7 @@ namespace MonoGameExample
             narrowPhaseButton.Set<Action>(() => { Framework.ScreenManager.LaunchNarrowPhase(); });
 
             var boardPhaseButton = World.CreateEntity();
-            boardPhaseButton.Set(new Transform2D() {Position = new Vector2(480, 320)});
+            boardPhaseButton.Set(new Transform2D() {Position = new System.Numerics.Vector2(480, 320)});
             text = new Text() {Value = "Board Phase", Color = Color.LightGray, Scale = 7f};
             boardPhaseButton.Set(text);
             size = text.MeasureString(DefaultFont);
@@ -46,7 +46,7 @@ namespace MonoGameExample
 
 
             var playgroundButton = World.CreateEntity();
-            playgroundButton.Set(new Transform2D() {Position = new Vector2(800, 480)});
+            playgroundButton.Set(new Transform2D() {Position = new System.Numerics.Vector2(800, 480)});
             text = new Text() {Value = "Playground", Color = Color.LightGray, Scale = 7f};
             playgroundButton.Set(text);
             size = text.MeasureString(DefaultFont);
