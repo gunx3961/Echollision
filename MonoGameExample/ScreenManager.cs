@@ -22,6 +22,11 @@ namespace MonoGameExample
             LaunchScreen(new MainMenu(_framework));
         }
 
+        public void LaunchPlayground()
+        {
+            LaunchScreen(new Playground(_framework));
+        }
+
         private void LaunchScreen(Screen screen)
         {
             // Unload previous screen

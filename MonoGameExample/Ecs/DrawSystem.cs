@@ -29,7 +29,7 @@ namespace MonoGameExample.Ecs
             var font = _framework.Resource.GetFont(GlobalResource.Font.DefaultPixel);
             ref var text = ref entity.Get<Text>();
             ref var transform = ref entity.Get<Transform2D>();
-            _batch.DrawString(font, text.Value, transform.Position, text.Color, transform.Rotation, Vector2.Zero,
+            _batch.DrawString(font, text.Value, transform.Position.ToXnaVector2(), text.Color, transform.Rotation, Vector2.Zero,
                 text.Scale, SpriteEffects.None, 0f);
         }
 

@@ -52,7 +52,7 @@ namespace MonoGameExample
             size = text.MeasureString(DefaultFont);
             collider = ColliderFactory.Rect(size);
             playgroundButton.Set(collider);
-            playgroundButton.Set<Action>(() => { Framework.ScreenManager.LaunchNarrowPhase(); });
+            playgroundButton.Set<Action>(() => { Framework.ScreenManager.LaunchPlayground(); });
         }
 
         public override void Update(GameTime gameTime)
