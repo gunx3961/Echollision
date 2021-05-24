@@ -61,7 +61,8 @@ namespace MonoGameExample
             ob.Set(new Obstruction {Speed = 240f, AngularSpeed = 1.4f * MathF.PI});
 
             _logicalSystem = new SequentialSystem<GameTime>(
-                new ActionSystem<GameTime>(FireSystem),
+                // new ActionSystem<GameTime>(FireSystem),
+                new ActionSystem<GameTime>(AutoFire),
                 new ActionSystem<GameTime>(ObstructionSystem),
                 new ActionSystem<GameTime>(BulletSystem)
             );
@@ -101,6 +102,27 @@ namespace MonoGameExample
         {
             var mousePosition = Framework.MouseState.Position.ToVector2().ToSystemVector2();
             var orientation = System.Numerics.Vector2.Normalize(mousePosition);
+
+            var bulletEntity = World.CreateEntity();
+
+            var initialTransform = new Transform2D {Position = System.Numerics.Vector2.Zero, Rotation = 0f};
+            bulletEntity.Set(initialTransform);
+
+            var bullet = new Bullet
+            {
+                Orientation = orientation,
+                Speed = 5000f,
+                BirthTime = gameTime.TotalGameTime,
+                LifeTime = 1f
+            };
+            bulletEntity.Set(bullet);
+        }
+
+        private void AutoFire(GameTime gameTime)
+        {
+            var x = (float)gameTime.TotalGameTime.TotalSeconds % 1f;
+            var y = 1f - (float)x;
+            var orientation = new Vector2(x, y);
 
             var bulletEntity = World.CreateEntity();
 
