@@ -1,4 +1,4 @@
-﻿#define DEBUG_DRAW
+﻿// #define DEBUG_DRAW
 
 using System;
 using System.Diagnostics;

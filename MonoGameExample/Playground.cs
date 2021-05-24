@@ -48,7 +48,7 @@ namespace MonoGameExample
             var ob = World.CreateEntity();
             var obPosition = Framework.LogicalSize.ToVector2().ToSystemVector2() / 2f;
             ob.Set(new Transform2D {Position = obPosition, Rotation = 0f});
-            ob.Set(new Obstruction {Speed = 100f, AngularSpeed = 0.5f * MathF.PI});
+            ob.Set(new Obstruction {Speed = 240f, AngularSpeed = 1f * MathF.PI});
 
             _logicalSystem = new SequentialSystem<GameTime>(
                 new ActionSystem<GameTime>(FireSystem),
@@ -76,12 +76,15 @@ namespace MonoGameExample
             SpriteBatch.End();
         }
 
+        private double _fireInterval = 0.1;
+        private TimeSpan _lastFire;
+
         private void FireSystem(GameTime gameTime)
         {
-            if (Framework.MouseState.WasButtonJustDown(MouseButton.Left))
-            {
-                Fire(gameTime);
-            }
+            if (!Framework.MouseState.IsButtonDown(MouseButton.Left) ||
+                !(gameTime.TotalGameTime.TotalSeconds - _lastFire.TotalSeconds > _fireInterval)) return;
+            Fire(gameTime);
+            _lastFire = gameTime.TotalGameTime;
         }
 
         private void Fire(GameTime gameTime)
@@ -97,9 +100,9 @@ namespace MonoGameExample
             var bullet = new Bullet
             {
                 Orientation = orientation,
-                Speed = 1000f,
+                Speed = 5000f,
                 BirthTime = gameTime.TotalGameTime,
-                LifeTime = 2f
+                LifeTime = 1f
             };
             bulletEntity.Set(bullet);
         }
@@ -112,6 +115,9 @@ namespace MonoGameExample
                 ref var obstruction = ref obs[i].Get<Obstruction>();
                 ref var transform = ref obs[i].Get<Transform2D>();
                 transform.Rotation += (float) (gameTime.ElapsedGameTime.TotalSeconds * obstruction.AngularSpeed);
+                // var offset = new Vector2(
+                //     (float) (obstruction.Speed * Math.Sin(gameTime.TotalGameTime.TotalSeconds * 5)), 0);
+                // transform.Position = Framework.LogicalSize.ToVector2().ToSystemVector2() / 2f + offset;
             }
         }
 
@@ -146,6 +152,7 @@ namespace MonoGameExample
                     bullet.IsHit = true;
                     bullet.Orientation = n;
                     var hitPoint = transform.Position + translation * t;
+                    bullet.Hit = hitPoint;
                     transform.Position = hitPoint + (1f - t) * Vector2.Normalize(n) * bullet.Speed *
                         (float) gameTime.ElapsedGameTime.TotalSeconds;
                 }
@@ -163,7 +170,8 @@ namespace MonoGameExample
             var obs = _obstructionSet.GetEntities();
 
             Span<Vector2> verts = stackalloc Vector2[4];
-            for (var i = 0; i < obs.Length; i += 1)
+            int i;
+            for (i = 0; i < obs.Length; i += 1)
             {
                 ref var obstruction = ref obs[i].Get<Obstruction>();
                 ref var transform = ref obs[i].Get<Transform2D>();
@@ -171,13 +179,28 @@ namespace MonoGameExample
                 var rotation = Matrix3x2.CreateRotation(transform.Rotation);
                 for (var j = 0; j < 4; j += 1)
                 {
-                    verts[i] = Vector2.Transform(_obstructionVerts[i], rotation) + transform.Position;
+                    verts[j] = Vector2.Transform(_obstructionVerts[j], rotation) + transform.Position;
                 }
 
                 SpriteBatch.DrawLine(verts[0].ToXnaVector2(), verts[1].ToXnaVector2(), Color.White);
                 SpriteBatch.DrawLine(verts[1].ToXnaVector2(), verts[2].ToXnaVector2(), Color.White);
                 SpriteBatch.DrawLine(verts[2].ToXnaVector2(), verts[3].ToXnaVector2(), Color.White);
                 SpriteBatch.DrawLine(verts[3].ToXnaVector2(), verts[0].ToXnaVector2(), Color.White);
+            }
+
+            for (i = 0; i < bullets.Length; i += 1)
+            {
+                ref var bullet = ref bullets[i].Get<Bullet>();
+                ref var transform = ref bullets[i].Get<Transform2D>();
+                if (bullet.IsHit)
+                {
+                    SpriteBatch.DrawLine(bullet.Start.ToXnaVector2(), bullet.Hit.ToXnaVector2(), Color.Aqua);
+                    SpriteBatch.DrawLine(bullet.Hit.ToXnaVector2(), transform.Position.ToXnaVector2(), Color.Aqua);
+                }
+                else
+                {
+                    SpriteBatch.DrawLine(bullet.Start.ToXnaVector2(), transform.Position.ToXnaVector2(), Color.Aqua);
+                }
             }
         }
 
