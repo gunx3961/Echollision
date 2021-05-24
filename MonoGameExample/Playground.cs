@@ -46,9 +46,19 @@ namespace MonoGameExample
 
             // Obstructions
             var ob = World.CreateEntity();
-            var obPosition = Framework.LogicalSize.ToVector2().ToSystemVector2() / 2f;
+            var obPosition = new Vector2(300, 700);
             ob.Set(new Transform2D {Position = obPosition, Rotation = 0f});
-            ob.Set(new Obstruction {Speed = 240f, AngularSpeed = 1f * MathF.PI});
+            ob.Set(new Obstruction {Speed = 240f, AngularSpeed = 1.1f * MathF.PI});
+            
+            ob = World.CreateEntity();
+            obPosition = new Vector2(860, 650);
+            ob.Set(new Transform2D {Position = obPosition, Rotation = 0f});
+            ob.Set(new Obstruction {Speed = 240f, AngularSpeed = 0.55f * MathF.PI});
+            
+            ob = World.CreateEntity();
+            obPosition = new Vector2(1200, 240);
+            ob.Set(new Transform2D {Position = obPosition, Rotation = 0f});
+            ob.Set(new Obstruction {Speed = 240f, AngularSpeed = 1.4f * MathF.PI});
 
             _logicalSystem = new SequentialSystem<GameTime>(
                 new ActionSystem<GameTime>(FireSystem),
@@ -125,7 +135,6 @@ namespace MonoGameExample
         {
             var bullets = _bulletSet.GetEntities();
             var obs = _obstructionSet.GetEntities();
-            var obTransform = obs[0].Get<Transform2D>().ToCollisionTransform();
 
             for (var i = 0; i < bullets.Length; i += 1)
             {
@@ -140,21 +149,38 @@ namespace MonoGameExample
                 var translation = Vector2.Normalize(bullet.Orientation) * bullet.Speed *
                                   (float) gameTime.ElapsedGameTime.TotalSeconds;
 
-                var isHit = Collision.Continuous(
-                    _obstructionCollider, obTransform, Vector2.Zero,
-                    _bulletCollider, transform.ToCollisionTransform(), translation,
-                    out var t, out var n
-                );
+                var isHit = false;
+                var t = float.MaxValue;
+                var n = Vector2.One;
 
+                for (var o = 0; o < obs.Length; o += 1)
+                {
+                    var obTransform = obs[o].Get<Transform2D>().ToCollisionTransform();
+                    var tempHit = Collision.Continuous(
+                        _obstructionCollider, obTransform, Vector2.Zero,
+                        _bulletCollider, transform.ToCollisionTransform(), translation,
+                        out var tempT, out var tempN
+                    );
+                    if (!(tempHit && tempT < t)) continue;
+                    isHit = true;
+                    t = tempT;
+                    n = tempN;
+                }
+                
                 bullet.Start = transform.Position;
                 if (isHit)
                 {
                     bullet.IsHit = true;
-                    bullet.Orientation = n;
                     var hitPoint = transform.Position + translation * t;
                     bullet.Hit = hitPoint;
-                    transform.Position = hitPoint + (1f - t) * Vector2.Normalize(n) * bullet.Speed *
+
+                    var reflection = Vector2.Reflect(hitPoint - transform.Position, Vector2.Normalize(n));
+                    bullet.Orientation = reflection;
+                    transform.Position = hitPoint + (1f - t) * Vector2.Normalize(reflection) * bullet.Speed *
                         (float) gameTime.ElapsedGameTime.TotalSeconds;
+                    
+                    // transform.Position = hitPoint + (1f - t) * Vector2.Normalize(n) * bullet.Speed *
+                    //     (float) gameTime.ElapsedGameTime.TotalSeconds;
                 }
                 else
                 {
