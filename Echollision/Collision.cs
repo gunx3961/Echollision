@@ -140,9 +140,9 @@ namespace ViLAWAVE.Echollision
 
         private static void S2D(ref Span<Vector2> w, ref Span<float> lambda, ref int vertexCount)
         {
-            var s1 = w[0];
-            var s2 = w[1];
-            var s3 = w[2];
+            ref var s1 = ref w[0];
+            ref var s2 = ref w[1];
+            ref var s3 = ref w[2];
 
             var cofactor31 = (s2.X * s3.Y) - (s3.X * s2.Y);
             var cofactor32 = (s3.X * s1.Y) - (s1.X * s3.Y);
@@ -244,8 +244,8 @@ namespace ViLAWAVE.Echollision
 
         private static void S1D(ref Span<Vector2> w, ref Span<float> lambda, ref int vertexCount)
         {
-            var s1 = w[0];
-            var s2 = w[1];
+            ref var s1 = ref w[0];
+            ref var s2 = ref w[1];
 
             var t = s2 - s1;
             var po = Vector2.Dot(-s1, t) / t.LengthSquared() * t + s1;
@@ -280,7 +280,7 @@ namespace ViLAWAVE.Echollision
             //     po    s1    s2
             if (!IsSameSign(miuMax, cofactor2))
             {
-                w[0] = s1;
+                // w[0] = s1;
                 lambda[0] = 1f;
                 vertexCount = 1;
                 return;
@@ -312,7 +312,7 @@ namespace ViLAWAVE.Echollision
         )
         {
             // Continuous a.k.a. priori collision detection via GJK Ray Cast
-            
+
             var ray = translationB - translationA;
             t = 0f; // Hit parameter a.k.a lambda a.k.a. time
             var x = Vector2.Zero; // Source is the origin
@@ -328,8 +328,10 @@ namespace ViLAWAVE.Echollision
             DebugDraw.DrawString("ray", ray);
             DebugDraw.DrawLine(Vector2.Zero, ray);
 #endif
-            
+
             Span<Vector2> setP = stackalloc Vector2[3];
+            Span<Vector2> xMinusY = stackalloc Vector2[3];
+            Span<(Vector2 xMinusP, Vector2 p)> lookup = stackalloc (Vector2, Vector2)[3];
             var pCount = 0;
             Span<float> lambda = stackalloc float[3];
             var k = 0;
@@ -351,7 +353,7 @@ namespace ViLAWAVE.Echollision
 
                 var p = a.WorldSupport(transformA, v) - b.WorldSupport(transformB, -v);
                 var w = x - p;
-                
+
 #if DEBUG_DRAW
                 DebugDraw.DrawGjkRayCastProcedure(x, p, pCount, setP, v);
 #endif
@@ -371,17 +373,38 @@ namespace ViLAWAVE.Echollision
                 // Be careful to compute v(conv({x} − Y))
                 for (i = 0; i < pCount; i += 1)
                 {
-                    setP[i] = x - setP[i];
+                    xMinusY[i] = x - setP[i];
+                    lookup[i].p = setP[i];
+                    lookup[i].xMinusP = xMinusY[i];
                 }
-                setP[pCount] = x - p;
-                pCount += 1;
-                DistanceSv(ref setP, ref lambda, ref pCount);
+
+                var isNewP = true;
+                for (i = 0; i < pCount; i += 1)
+                {
+                    if (p != setP[i]) continue;
+                    isNewP = false;
+                    break;
+                }
+
+                if (isNewP)
+                {
+                    xMinusY[pCount] = x - p;
+                    lookup[pCount].p = p;
+                    lookup[pCount].xMinusP = xMinusY[i];
+                    pCount += 1;
+                }
+
+                DistanceSv(ref xMinusY, ref lambda, ref pCount);
                 v = Vector2.Zero;
                 for (i = 0; i < pCount; i += 1)
                 {
-                    v += lambda[i] * setP[i];
-                    // get P from {x} − Y 
-                    setP[i] = x - setP[i];
+                    v += lambda[i] * xMinusY[i];
+                    // get P from {x} − Y
+                    for (var j = 0; j < pCount; j += 1)
+                    {
+                        if (xMinusY[i] != lookup[j].xMinusP) continue;
+                        setP[i] = lookup[j].p;
+                    }
                 }
             }
 #if DEBUG_DRAW
@@ -405,14 +428,14 @@ namespace ViLAWAVE.Echollision
         )
         {
             // Intersection detection via MPR 
-            
+
             var centerA = a.WorldCenter(transformA);
             var centerB = b.WorldCenter(transformB);
             var v0 = centerB - centerA;
             if (v0 == Vector2.Zero) v0 = new Vector2(0.00001f, 0);
 
             var normal = Vector2.Normalize(-v0);
-            
+
             var v1 = b.WorldSupport(transformB, normal) - a.WorldSupport(transformA, -normal);
 
             normal = Vector2.Normalize(v1 - v0);
@@ -495,7 +518,7 @@ namespace ViLAWAVE.Echollision
             var supportWorld = Vector2.Transform(supportLocal, rotation) + transform.Translation;
             return supportWorld;
         }
-        
+
         private static Vector2 WorldCenter(this ICollider shape, in Transform transform)
         {
             var rotation = Matrix3x2.CreateRotation(transform.Rotation);
