@@ -18,7 +18,6 @@ namespace MonoGameExample
 
         public Framework()
         {
-            IllCase.Case();
             _graphics = new GraphicsDeviceManager(this);
             _graphics.SynchronizeWithVerticalRetrace = false;
             IsFixedTimeStep = true;

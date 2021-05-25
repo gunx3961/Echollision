@@ -1,12 +1,15 @@
-﻿using System.Numerics;
+using System;
+using Xunit;
+using System.Numerics;
 using ViLAWAVE.Echollision;
 using ViLAWAVE.Echollision.Collider;
 
-namespace MonoGameExample
+namespace Test
 {
-    public static class IllCase
+    public class CollisionTest
     {
-        public static void Case()
+        [Fact]
+        public void ContinuousIllCase()
         {
             var a = new ConvexCollider(new[]
             {
@@ -22,14 +25,10 @@ namespace MonoGameExample
             var tb = new Transform(new Vector2(675.546448f, 487.930237f), 0f);
             var translationB = new Vector2(67.5546494f, 48.7930183f);
 
-            Collision.Continuous(a, ta, translationA, b, tb, translationB, out var t, out var n);
+            var result = Collision.Continuous(a, ta, translationA, b, tb, translationB, out var t, out var n);
+            Assert.True(result);
+            Assert.True(t is > 0f and < 1f);
+            Assert.True(n.LengthSquared() > 0);
         }
-
-        // public ICollider a;
-        // public Transform ta = new Transform(new Vector2(860, 650), 1168.25146f);
-        // public Vector2 translationA = Vector2.Zero;
-        // public ICollider b;
-        // public Transform tb = new Transform(new Vector2(675.546448f, 487.930237f), 0f);
-        // public Vector2 translationB = new Vector2(67.5546494f, 48.7930183f);
     }
 }

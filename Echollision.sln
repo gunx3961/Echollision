@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Echollision", "Echollision\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoGameExample", "MonoGameExample\MonoGameExample.csproj", "{C25C762F-37AB-4754-85A6-B79B38536A93}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\Test.csproj", "{7FD4E646-82BE-4B38-96E5-2A519C5392FC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,5 +46,17 @@ Global
 		{C25C762F-37AB-4754-85A6-B79B38536A93}.Release|x64.Build.0 = Release|Any CPU
 		{C25C762F-37AB-4754-85A6-B79B38536A93}.Release|x86.ActiveCfg = Release|Any CPU
 		{C25C762F-37AB-4754-85A6-B79B38536A93}.Release|x86.Build.0 = Release|Any CPU
+		{7FD4E646-82BE-4B38-96E5-2A519C5392FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7FD4E646-82BE-4B38-96E5-2A519C5392FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7FD4E646-82BE-4B38-96E5-2A519C5392FC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7FD4E646-82BE-4B38-96E5-2A519C5392FC}.Debug|x64.Build.0 = Debug|Any CPU
+		{7FD4E646-82BE-4B38-96E5-2A519C5392FC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7FD4E646-82BE-4B38-96E5-2A519C5392FC}.Debug|x86.Build.0 = Debug|Any CPU
+		{7FD4E646-82BE-4B38-96E5-2A519C5392FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7FD4E646-82BE-4B38-96E5-2A519C5392FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7FD4E646-82BE-4B38-96E5-2A519C5392FC}.Release|x64.ActiveCfg = Release|Any CPU
+		{7FD4E646-82BE-4B38-96E5-2A519C5392FC}.Release|x64.Build.0 = Release|Any CPU
+		{7FD4E646-82BE-4B38-96E5-2A519C5392FC}.Release|x86.ActiveCfg = Release|Any CPU
+		{7FD4E646-82BE-4B38-96E5-2A519C5392FC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
