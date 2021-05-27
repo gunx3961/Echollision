@@ -3,6 +3,7 @@ using System.Numerics;
 using DefaultEcs;
 using DefaultEcs.System;
 using Microsoft.Xna.Framework;
+using MonoGame.Extended;
 using MonoGame.Extended.Input;
 using MonoGameExample.Ecs;
 using ViLAWAVE.Echollision;
@@ -26,6 +27,8 @@ namespace MonoGameExample
         private SphereCollider _bulletCollider;
         private Vector2[] _obstructionVerts;
         private ConvexCollider _obstructionCollider;
+
+        private Random _randomSequence = new Random();
 
         public override void Initialize()
         {
@@ -120,8 +123,9 @@ namespace MonoGameExample
 
         private void AutoFire(GameTime gameTime)
         {
-            var x = (float)gameTime.TotalGameTime.TotalSeconds % 1f;
-            var y = 1f - (float)x;
+            var x = _randomSequence.NextSingle(0f, 1f);
+            // var x = (float)gameTime.TotalGameTime.TotalSeconds % 1f;
+            var y = 1f - x;
             var orientation = new Vector2(x, y);
 
             var bulletEntity = World.CreateEntity();
