@@ -6,7 +6,7 @@ using ViLAWAVE.Echollision.Collider;
 
 namespace Test
 {
-    public class CollisionTest
+    public class NarrowPhase
     {
         [Fact]
         public void ContinuousIllCase()
@@ -29,6 +29,41 @@ namespace Test
             Assert.True(result);
             Assert.True(t is > 0f and < 1f);
             Assert.True(n.LengthSquared() > 0);
+        }
+
+        [Fact]
+        public void IntersectionCorrectness()
+        {
+            
+        }
+
+        [Fact]
+        public void PrioriCorrectness()
+        {
+            var a = new SphereCollider(0f);
+            var transformA = new Transform(Vector2.Zero, 0f);
+            var translationA = new Vector2(19f, 0f);
+            
+            var b = new SegmentCollider(new Vector2(0f, -10f), new Vector2(0f, 10f));
+            var transformB = new Transform(new Vector2(10f, 0f), 0f);
+            var translationB = Vector2.Zero;
+            
+            var result = Collision.Continuous(a, transformA, translationA, b, transformB, translationB, out var t, out var n);
+            Assert.True(result);
+            var exceptedT = 10f / 19f;
+            Assert.True(t < exceptedT + 0.1f && t > exceptedT - 0.1f);
+        }
+
+        [Fact]
+        public void PenetrationDepthCorrectness()
+        {
+            
+        }
+
+        [Fact]
+        public void CenteredOriginPenetrationDepth()
+        {
+            
         }
     }
 }
