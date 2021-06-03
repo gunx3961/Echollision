@@ -524,5 +524,29 @@ namespace ViLAWAVE.Echollision
             var rotation = Matrix3x2.CreateRotation(transform.Rotation);
             return Vector2.Transform(shape.Center, rotation) + transform.Translation;
         }
+
+        #region EPA Utils
+
+        private struct Entry
+        {
+            public Vector2 y1;
+            public Vector2 y2;
+            public float lambda1;
+            public float lambda2;
+            public float key;
+        }
+        
+        private static void PushEntry(Span<Entry> queue, ref Entry entry)
+        {
+            
+        }
+
+        private static ref Entry BestEntry(Span<Entry> queue)
+        {
+            return ref queue[0];
+        }
+
+        #endregion
+        
     }
 }
