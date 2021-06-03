@@ -527,26 +527,94 @@ namespace ViLAWAVE.Echollision
 
         #region EPA Utils
 
+        // Priority queue implementation via binary heap.
+        private ref struct PriorityQueue
+        {
+            internal PriorityQueue(Span<Entry> buffer)
+            {
+                _buffer = buffer;
+                _i = -1;
+            }
+
+            private readonly Span<Entry> _buffer;
+            private int _i;
+
+            internal void Push(ref Entry e)
+            {
+                _i += 1;
+                _buffer[_i] = e;
+
+                var pos = _i;
+                var thisKey = e.distance;
+                while (pos > 0)
+                {
+                    var parent = Parent(pos);
+                    if (_buffer[parent].distance > thisKey)
+                    {
+                        Swap(parent, pos);
+                    }
+
+                    pos = parent;
+                }
+            }
+
+            internal Entry PopBest()
+            {
+                if (_i < 0) throw new ApplicationException("Cannot pop from empty queue.");
+
+                var best = _buffer[0];
+                _i -= 1;
+                if (_i == -1) return best;
+
+                // TODO: can make it lazy
+                _buffer[0] = _buffer[_i + 1];
+                var pos = 0;
+                while (true)
+                {
+                    var smallest = pos;
+                    var leftChild = LeftChild(smallest);
+                    var rightChild = leftChild + 1;
+
+                    if (leftChild <= _i && _buffer[leftChild].distance < _buffer[smallest].distance)
+                        smallest = leftChild;
+                    if (rightChild <= _i && _buffer[rightChild].distance < _buffer[smallest].distance)
+                        smallest = rightChild;
+
+                    if (smallest == pos) break;
+                    Swap(pos, smallest);
+                    pos = smallest;
+                }
+
+                return best;
+            }
+
+            private void Swap(int a, int b)
+            {
+                var temp = _buffer[a];
+                _buffer[a] = _buffer[b];
+                _buffer[b] = temp;
+            }
+
+            // TODO: make them inline
+            private static int Parent(int i)
+            {
+                return (i - 1) / 2;
+            }
+
+            private static int LeftChild(int i)
+            {
+                return 2 * i + 1;
+            }
+        }
+
         private struct Entry
         {
             public Vector2 y1;
             public Vector2 y2;
-            public float lambda1;
-            public float lambda2;
-            public float key;
+            public Vector2 v;
+            public float distance;
         }
         
-        private static void PushEntry(Span<Entry> queue, ref Entry entry)
-        {
-            
-        }
-
-        private static ref Entry BestEntry(Span<Entry> queue)
-        {
-            return ref queue[0];
-        }
-
         #endregion
-        
     }
 }
