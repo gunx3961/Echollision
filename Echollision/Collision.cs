@@ -1,4 +1,4 @@
-﻿// #define DEBUG_DRAW
+﻿#define DEBUG_DRAW
 
 using System;
 using System.Diagnostics;
@@ -113,6 +113,232 @@ namespace ViLAWAVE.Echollision
             return v.Length();
         }
 
+        /// <summary>
+        /// Continuous collision detection.<br/>
+        /// </summary>
+        /// <param name="a">Object A.</param>
+        /// <param name="transformA">The transform of object A.</param>
+        /// <param name="translationA">The movement will be applied to object A.</param>
+        /// <param name="b">Object B.</param>
+        /// <param name="transformB">The transform of object B.</param>
+        /// <param name="translationB">The movement will be applied to object B.</param>
+        /// <param name="t">Hit parameter a.k.a. time.</param>
+        /// <param name="normal">Normal at hit point.</param>
+        /// <returns>Whether will collide.</returns>
+        public static bool Continuous(
+            ICollider a, in Transform transformA, Vector2 translationA,
+            ICollider b, in Transform transformB, Vector2 translationB,
+            out float t, out Vector2 normal
+        )
+        {
+            // Continuous a.k.a. priori collision detection via GJK Ray Cast
+
+            var ray = translationB - translationA;
+            t = 0f; // Hit parameter a.k.a lambda a.k.a. time
+            var x = Vector2.Zero; // Source is the origin
+            normal = Vector2.Zero;
+
+            // Initial v = x − “arbitrary point in C”
+            var v = -(a.WorldSupport(transformA, Vector2.UnitX) - b.WorldSupport(transformB, -Vector2.UnitX));
+
+#if DEBUG_DRAW
+            DebugDraw.Clear();
+            DebugDraw.DrawString("origin", Vector2.Zero);
+            DebugDraw.DrawPoint(Vector2.Zero);
+            DebugDraw.DrawString("ray", ray);
+            DebugDraw.DrawLine(Vector2.Zero, ray);
+#endif
+
+            Span<Vector2> setP = stackalloc Vector2[3];
+            Span<Vector2> xMinusY = stackalloc Vector2[3];
+            Span<(Vector2 xMinusP, Vector2 p)> lookup = stackalloc (Vector2, Vector2)[3];
+            var pCount = 0;
+            Span<float> lambda = stackalloc float[3];
+            var k = 0;
+            while (k < 64)
+            {
+                k += 1;
+                int i;
+
+                // Termination
+                var vLengthSquared = v.LengthSquared();
+                var maxPxLengthSquared = 0f;
+                for (i = 0; i < pCount; i += 1)
+                {
+                    var ls = (x - setP[i]).LengthSquared();
+                    if (ls > maxPxLengthSquared) maxPxLengthSquared = ls;
+                }
+
+                if (vLengthSquared <= Tolerance * maxPxLengthSquared) break;
+
+                var p = a.WorldSupport(transformA, v) - b.WorldSupport(transformB, -v);
+                var w = x - p;
+
+#if DEBUG_DRAW
+                DebugDraw.DrawGjkRayCastProcedure(x, p, pCount, setP, v);
+#endif
+
+                var vDotW = Vector2.Dot(v, w);
+                if (vDotW > 0f)
+                {
+                    var vDotR = Vector2.Dot(v, ray);
+                    if (vDotR >= 0f) return false;
+                    t = t - vDotW / vDotR;
+                    // Of course
+                    if (t > 1f) return false;
+                    x = t * ray;
+                    normal = v;
+                }
+
+                // Be careful to compute v(conv({x} − Y))
+                for (i = 0; i < pCount; i += 1)
+                {
+                    xMinusY[i] = x - setP[i];
+                    lookup[i].p = setP[i];
+                    lookup[i].xMinusP = xMinusY[i];
+                }
+
+                var isNewP = true;
+                for (i = 0; i < pCount; i += 1)
+                {
+                    if (p != setP[i]) continue;
+                    isNewP = false;
+                    break;
+                }
+
+                if (isNewP)
+                {
+                    xMinusY[pCount] = x - p;
+                    lookup[pCount].p = p;
+                    lookup[pCount].xMinusP = xMinusY[i];
+                    pCount += 1;
+                }
+
+                DistanceSv(ref xMinusY, ref lambda, ref pCount);
+                v = Vector2.Zero;
+                for (i = 0; i < pCount; i += 1)
+                {
+                    v += lambda[i] * xMinusY[i];
+                    // get P from {x} − Y
+                    for (var j = 0; j < pCount; j += 1)
+                    {
+                        if (xMinusY[i] != lookup[j].xMinusP) continue;
+                        setP[i] = lookup[j].p;
+                    }
+                }
+            }
+#if DEBUG_DRAW
+            DebugDraw.UpdateIterationCounter(k);
+#endif
+
+            return true;
+        }
+
+        /// <summary>
+        /// Intersection detection.
+        /// </summary>
+        /// <param name="a">Object A.</param>
+        /// <param name="transformA">The transform of object A.</param>
+        /// <param name="b">Object B.</param>
+        /// <param name="transformB">The transform of object B.</param>
+        /// <returns>Whether two objects intersect.</returns>
+        public static bool Intersection(
+            ICollider a, in Transform transformA,
+            ICollider b, in Transform transformB
+        )
+        {
+            // Intersection detection via MPR 
+
+            var centerA = a.WorldCenter(transformA);
+            var centerB = b.WorldCenter(transformB);
+            var v0 = centerB - centerA;
+            if (v0 == Vector2.Zero) v0 = new Vector2(0.00001f, 0);
+
+            var normal = Vector2.Normalize(-v0);
+
+            var v1 = b.WorldSupport(transformB, normal) - a.WorldSupport(transformA, -normal);
+
+            normal = Vector2.Normalize(v1 - v0);
+            normal = new Vector2(normal.Y, -normal.X);
+            if (Vector2.Dot(-v0, normal) < 0) normal = -normal;
+
+            var v2 = b.WorldSupport(transformB, normal) - a.WorldSupport(transformA, -normal);
+
+#if DEBUG_DRAW
+            DebugDraw.Clear();
+            DebugDraw.DrawString("origin", Vector2.Zero);
+            DebugDraw.DrawPoint(Vector2.Zero);
+            DebugDraw.DrawString("v0", v0);
+            DebugDraw.DrawPoint(v0);
+            DebugDraw.DrawString("origin ray", v0 + normal * 240);
+            DebugDraw.DrawLine(v0, v0 + normal * 240);
+            DebugDraw.DrawString("v1", v1);
+            DebugDraw.DrawPoint(v1);
+            DebugDraw.DrawLine(v0, v1);
+            DebugDraw.DrawString("v2", v2);
+            DebugDraw.DrawPoint(v2);
+            DebugDraw.DrawLine(v0, v2);
+            DebugDraw.DrawLine(v1, v2);
+#endif
+            const int maxRefinement = 5;
+            var counter = maxRefinement;
+            while (counter > 0)
+            {
+                normal = Vector2.Normalize(v2 - v1);
+                normal = new Vector2(normal.Y, -normal.X);
+                if (Vector2.Dot(normal, v0 - v1) > 0) normal = -normal; // Outer normal
+
+#if DEBUG_DRAW
+                var debugMidPoint = (v1 + v2) / 2;
+                DebugDraw.DrawLine(debugMidPoint, debugMidPoint + normal * 100);
+                DebugDraw.DrawString("n", debugMidPoint + normal * 100);
+#endif
+
+                if (Vector2.Dot(normal, -v1) < 0) return true;
+
+                var v3 = b.WorldSupport(transformB, normal) - a.WorldSupport(transformA, -normal);
+#if DEBUG_DRAW
+                DebugDraw.DrawLine(v0, v3);
+#endif
+
+                if (Vector2.Dot(normal, v3) < 0) return false;
+
+                normal = Vector2.Normalize(v3 - v0);
+                normal = new Vector2(normal.Y, -normal.X);
+
+                if (Vector2.Dot(v2 - v1, normal) > 0 ^ Vector2.Dot(-v0, normal) > 0) // in v1 side
+                {
+                    v2 = v3;
+#if DEBUG_DRAW
+                    DebugDraw.DrawLine(v1, v3);
+#endif
+                }
+                else
+                {
+                    v1 = v3;
+#if DEBUG_DRAW
+                    DebugDraw.DrawLine(v2, v3);
+#endif
+                }
+
+                counter -= 1;
+            }
+
+            return false;
+        }
+
+        // Penetration Depth Query via MPR
+        private static void ContinueToQueryPenetrationDepth(
+            ICollider a, in Transform transformA,
+            ICollider b, in Transform transformB
+        )
+        {
+
+        }
+
+        #region Distance Sub-algorithm
+        
+        // Signed-volume method
         private static void DistanceSv(ref Span<Vector2> tau, ref Span<float> lambda, ref int vertexCount)
         {
             switch (vertexCount)
@@ -293,222 +519,8 @@ namespace ViLAWAVE.Echollision
             vertexCount = 2;
         }
 
-        /// <summary>
-        /// Continuous collision detection.<br/>
-        /// </summary>
-        /// <param name="a">Object A.</param>
-        /// <param name="transformA">The transform of object A.</param>
-        /// <param name="translationA">The movement will be applied to object A.</param>
-        /// <param name="b">Object B.</param>
-        /// <param name="transformB">The transform of object B.</param>
-        /// <param name="translationB">The movement will be applied to object B.</param>
-        /// <param name="t">Hit parameter a.k.a. time.</param>
-        /// <param name="normal">Normal at hit point.</param>
-        /// <returns>Whether will collide.</returns>
-        public static bool Continuous(
-            ICollider a, in Transform transformA, Vector2 translationA,
-            ICollider b, in Transform transformB, Vector2 translationB,
-            out float t, out Vector2 normal
-        )
-        {
-            // Continuous a.k.a. priori collision detection via GJK Ray Cast
-
-            var ray = translationB - translationA;
-            t = 0f; // Hit parameter a.k.a lambda a.k.a. time
-            var x = Vector2.Zero; // Source is the origin
-            normal = Vector2.Zero;
-
-            // Initial v = x − “arbitrary point in C”
-            var v = -(a.WorldSupport(transformA, Vector2.UnitX) - b.WorldSupport(transformB, -Vector2.UnitX));
-
-#if DEBUG_DRAW
-            DebugDraw.Clear();
-            DebugDraw.DrawString("origin", Vector2.Zero);
-            DebugDraw.DrawPoint(Vector2.Zero);
-            DebugDraw.DrawString("ray", ray);
-            DebugDraw.DrawLine(Vector2.Zero, ray);
-#endif
-
-            Span<Vector2> setP = stackalloc Vector2[3];
-            Span<Vector2> xMinusY = stackalloc Vector2[3];
-            Span<(Vector2 xMinusP, Vector2 p)> lookup = stackalloc (Vector2, Vector2)[3];
-            var pCount = 0;
-            Span<float> lambda = stackalloc float[3];
-            var k = 0;
-            while (k < 64)
-            {
-                k += 1;
-                int i;
-
-                // Termination
-                var vLengthSquared = v.LengthSquared();
-                var maxPxLengthSquared = 0f;
-                for (i = 0; i < pCount; i += 1)
-                {
-                    var ls = (x - setP[i]).LengthSquared();
-                    if (ls > maxPxLengthSquared) maxPxLengthSquared = ls;
-                }
-
-                if (vLengthSquared <= Tolerance * maxPxLengthSquared) break;
-
-                var p = a.WorldSupport(transformA, v) - b.WorldSupport(transformB, -v);
-                var w = x - p;
-
-#if DEBUG_DRAW
-                DebugDraw.DrawGjkRayCastProcedure(x, p, pCount, setP, v);
-#endif
-
-                var vDotW = Vector2.Dot(v, w);
-                if (vDotW > 0f)
-                {
-                    var vDotR = Vector2.Dot(v, ray);
-                    if (vDotR >= 0f) return false;
-                    t = t - vDotW / vDotR;
-                    // Of course
-                    if (t > 1f) return false;
-                    x = t * ray;
-                    normal = v;
-                }
-
-                // Be careful to compute v(conv({x} − Y))
-                for (i = 0; i < pCount; i += 1)
-                {
-                    xMinusY[i] = x - setP[i];
-                    lookup[i].p = setP[i];
-                    lookup[i].xMinusP = xMinusY[i];
-                }
-
-                var isNewP = true;
-                for (i = 0; i < pCount; i += 1)
-                {
-                    if (p != setP[i]) continue;
-                    isNewP = false;
-                    break;
-                }
-
-                if (isNewP)
-                {
-                    xMinusY[pCount] = x - p;
-                    lookup[pCount].p = p;
-                    lookup[pCount].xMinusP = xMinusY[i];
-                    pCount += 1;
-                }
-
-                DistanceSv(ref xMinusY, ref lambda, ref pCount);
-                v = Vector2.Zero;
-                for (i = 0; i < pCount; i += 1)
-                {
-                    v += lambda[i] * xMinusY[i];
-                    // get P from {x} − Y
-                    for (var j = 0; j < pCount; j += 1)
-                    {
-                        if (xMinusY[i] != lookup[j].xMinusP) continue;
-                        setP[i] = lookup[j].p;
-                    }
-                }
-            }
-#if DEBUG_DRAW
-            DebugDraw.UpdateIterationCounter(k);
-#endif
-
-            return true;
-        }
-
-        /// <summary>
-        /// Intersection detection.
-        /// </summary>
-        /// <param name="a">Object A.</param>
-        /// <param name="transformA">The transform of object A.</param>
-        /// <param name="b">Object B.</param>
-        /// <param name="transformB">The transform of object B.</param>
-        /// <returns>Whether two objects intersect.</returns>
-        public static bool Intersection(
-            ICollider a, in Transform transformA,
-            ICollider b, in Transform transformB
-        )
-        {
-            // Intersection detection via MPR 
-
-            var centerA = a.WorldCenter(transformA);
-            var centerB = b.WorldCenter(transformB);
-            var v0 = centerB - centerA;
-            if (v0 == Vector2.Zero) v0 = new Vector2(0.00001f, 0);
-
-            var normal = Vector2.Normalize(-v0);
-
-            var v1 = b.WorldSupport(transformB, normal) - a.WorldSupport(transformA, -normal);
-
-            normal = Vector2.Normalize(v1 - v0);
-            normal = new Vector2(normal.Y, -normal.X);
-            if (Vector2.Dot(-v0, normal) < 0) normal = -normal;
-
-            var v2 = b.WorldSupport(transformB, normal) - a.WorldSupport(transformA, -normal);
-
-#if DEBUG_DRAW
-            DebugDraw.Clear();
-            DebugDraw.DrawString("origin", Vector2.Zero);
-            DebugDraw.DrawPoint(Vector2.Zero);
-            DebugDraw.DrawString("v0", v0);
-            DebugDraw.DrawPoint(v0);
-            DebugDraw.DrawString("origin ray", v0 + normal * 240);
-            DebugDraw.DrawLine(v0, v0 + normal * 240);
-            DebugDraw.DrawString("v1", v1);
-            DebugDraw.DrawPoint(v1);
-            DebugDraw.DrawLine(v0, v1);
-            DebugDraw.DrawString("v2", v2);
-            DebugDraw.DrawPoint(v2);
-            DebugDraw.DrawLine(v0, v2);
-            DebugDraw.DrawLine(v1, v2);
-#endif
-
-            var counter = MaxRefinement;
-            while (counter > 0)
-            {
-                normal = Vector2.Normalize(v2 - v1);
-                normal = new Vector2(normal.Y, -normal.X);
-                if (Vector2.Dot(normal, v0 - v1) > 0) normal = -normal; // Outer normal
-
-#if DEBUG_DRAW
-                var debugMidPoint = (v1 + v2) / 2;
-                DebugDraw.DrawLine(debugMidPoint, debugMidPoint + normal * 100);
-                DebugDraw.DrawString("n", debugMidPoint + normal * 100);
-#endif
-
-                if (Vector2.Dot(normal, -v1) < 0) return true;
-
-                var v3 = b.WorldSupport(transformB, normal) - a.WorldSupport(transformA, -normal);
-#if DEBUG_DRAW
-                DebugDraw.DrawLine(v0, v3);
-#endif
-
-                if (Vector2.Dot(normal, v3) < 0) return false;
-
-                normal = Vector2.Normalize(v3 - v0);
-                normal = new Vector2(normal.Y, -normal.X);
-
-                if (Vector2.Dot(v2 - v1, normal) > 0 ^ Vector2.Dot(-v0, normal) > 0) // in v1 side
-                {
-                    v2 = v3;
-#if DEBUG_DRAW
-                    DebugDraw.DrawLine(v1, v3);
-#endif
-                }
-                else
-                {
-                    v1 = v3;
-#if DEBUG_DRAW
-                    DebugDraw.DrawLine(v2, v3);
-#endif
-                }
-
-                counter -= 1;
-            }
-
-            return false;
-        }
-
-        private const int MaxRefinement = 5;
-
+        #endregion
+        
         public static Vector2 WorldSupport(this ICollider shape, in Transform transform, Vector2 normal)
         {
             var rotation = Matrix3x2.CreateRotation(transform.Rotation);
@@ -614,7 +626,7 @@ namespace ViLAWAVE.Echollision
             public Vector2 v;
             public float distance;
         }
-        
+
         #endregion
     }
 }
