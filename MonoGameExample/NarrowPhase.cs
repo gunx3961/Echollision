@@ -227,12 +227,12 @@ namespace MonoGameExample
                     break;
             }
 
-            // _isCollide = Collision.Intersection(_colliderA, TransformA, _colliderB, TransformB);
+            _isCollide = Collision.IntersectionNew(_colliderA, TransformA, _colliderB, TransformB);
             // _distance = Collision.Distance(_colliderA, TransformA, _colliderB, TransformB);
-            _isCollide = Collision.Continuous(_colliderA, TransformA, _movementA.ToSystemVector2(), _colliderB,
-                TransformB, _movementB.ToSystemVector2(), out var t, out var normal);
-            _distance = t;
-            _time = t;
+            // _isCollide = Collision.Continuous(_colliderA, TransformA, _movementA.ToSystemVector2(), _colliderB,
+            //     TransformB, _movementB.ToSystemVector2(), out var t, out var normal);
+            // _distance = t;
+            // _time = t;
         }
 
         private ColliderTarget DetermineTarget(Point mousePosition)

@@ -9,8 +9,10 @@ namespace ViLAWAVE.Echollision
 {
     public static class Collision
     {
-        private const float Tolerance = 1e-6f; // [van der Bergen 2003] P.143
+        private const float ToleranceGjk = 1e-6f; // [van der Bergen 2003] P.143
         private const float RelativeErrorBound = 0.001f; // 0.1%
+
+        private const float ToleranceMpr = 1e-6f;
 
         /// <summary>
         /// Distance query.
@@ -101,7 +103,7 @@ namespace ViLAWAVE.Echollision
                     if (wls > maxWLengthSquared) maxWLengthSquared = wls;
                 }
 
-                if (wCount >= 3 || vkLengthSquared <= Tolerance * maxWLengthSquared)
+                if (wCount >= 3 || vkLengthSquared <= ToleranceGjk * maxWLengthSquared)
                 {
                     // We regard v as zero
                     return 0f;
@@ -169,7 +171,7 @@ namespace ViLAWAVE.Echollision
                     if (ls > maxPxLengthSquared) maxPxLengthSquared = ls;
                 }
 
-                if (vLengthSquared <= Tolerance * maxPxLengthSquared) break;
+                if (vLengthSquared <= ToleranceGjk * maxPxLengthSquared) break;
 
                 var p = a.WorldSupport(transformA, v) - b.WorldSupport(transformB, -v);
                 var w = x - p;
@@ -327,17 +329,82 @@ namespace ViLAWAVE.Echollision
             return false;
         }
 
+        public static bool IntersectionNew(
+            ICollider a, in Transform transformA,
+            ICollider b, in Transform transformB
+        )
+        {
+            var centerA = a.WorldCenter(transformA);
+            var centerB = b.WorldCenter(transformB);
+            var v0 = centerB - centerA;
+            if (v0 == Vector2.Zero) return true;
+
+            // Origin ray is always the outer direction
+            var originRay = -v0;
+            var v1 = b.WorldSupport(transformB, originRay) - a.WorldSupport(transformA, -originRay);
+            var v0v1 = v1 - v0;
+
+            var supportDirection = v0v1;
+            ToPositiveNormal(ref supportDirection);
+            // If normal sign is positive then origin is at positive side of v0-v1
+            var v0v1NormalSign = Math.Sign(Vector2.Dot(supportDirection, originRay));
+
+            // Origin is at v0-v1 direction
+            if (v0v1NormalSign == 0) return originRay.LengthSquared() <= v0v1.LengthSquared();
+
+            supportDirection *= v0v1NormalSign;
+            var v2 = b.WorldSupport(transformB, supportDirection) - a.WorldSupport(transformA, -supportDirection);
+
+            // TODO: Safe option
+            const int maxRefinement = 10;
+            var i = 0;
+            while (i++ < maxRefinement)
+            {
+                supportDirection = (v1 - v2) * v0v1NormalSign; // Make positive normal always point to outer direction 
+                ToPositiveNormal(ref supportDirection);
+
+                // Origin is inside the portal
+                if (Vector2.Dot(supportDirection, v1) >= 0f) return true;
+
+                var v3 = b.WorldSupport(transformB, supportDirection) - a.WorldSupport(transformA, -supportDirection);
+                // Origin is outside of the support plane
+                if (Vector2.Dot(supportDirection, v3) < 0f) return false;
+
+                supportDirection = v3 - v0;
+                ToPositiveNormal(ref supportDirection);
+                var v0v3NormalSign = Math.Sign(Vector2.Dot(supportDirection, originRay));
+
+                // Origin is at v0-v3 direction
+                if (v0v3NormalSign == 0) return originRay.LengthSquared() <= (v0 - v3).LengthSquared();
+
+                // Determine new v1 and v2 via two normal signs
+                if (v0v1NormalSign * v0v3NormalSign == 1) v1 = v3;
+                else v2 = v3;
+            }
+            
+            return false;
+        }
+
         // Penetration Depth Query via MPR
         private static void ContinueToQueryPenetrationDepth(
             ICollider a, in Transform transformA,
             ICollider b, in Transform transformB
         )
         {
-
         }
 
+        #region MPR Utils
+
+        // Here we define that vector(-y, x) is the POSITIVE normal of vector(x, y)
+        private static void ToPositiveNormal(ref Vector2 vector)
+        {
+            vector = new Vector2(-vector.Y, vector.X);
+        }
+
+        #endregion
+
         #region Distance Sub-algorithm
-        
+
         // Signed-volume method
         private static void DistanceSv(ref Span<Vector2> tau, ref Span<float> lambda, ref int vertexCount)
         {
@@ -520,7 +587,7 @@ namespace ViLAWAVE.Echollision
         }
 
         #endregion
-        
+
         public static Vector2 WorldSupport(this ICollider shape, in Transform transform, Vector2 normal)
         {
             var rotation = Matrix3x2.CreateRotation(transform.Rotation);
