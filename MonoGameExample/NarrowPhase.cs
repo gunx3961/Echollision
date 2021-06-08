@@ -525,6 +525,27 @@ namespace MonoGameExample
                         break;
                 }
             }
+            
+            // MPR procedures
+            if (DebugDraw.MprProcedure.Count > 0)
+            {
+                var procedureIndex = Math.Clamp(_debugCursor, 0, DebugDraw.MprProcedure.Count - 1);
+                var (v0, v1, v2, v3) = DebugDraw.MprProcedure[procedureIndex];
+                
+                SpriteBatch.DrawPoint(v0.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
+                SpriteBatch.DrawPoint(v1.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
+                SpriteBatch.DrawPoint(v2.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
+                SpriteBatch.DrawPoint(v3.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
+                SpriteBatch.DrawString(DefaultFont, "v0", v0.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
+                    Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
+                SpriteBatch.DrawString(DefaultFont, "v1", v1.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
+                    Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
+                SpriteBatch.DrawString(DefaultFont, "v2", v2.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
+                    Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
+                SpriteBatch.DrawString(DefaultFont, "v3", v3.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
+                    Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
+            }
+            
         }
     }
 }

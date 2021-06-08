@@ -17,6 +17,9 @@ namespace ViLAWAVE.Echollision
         public static readonly List<Tuple<Vector2, Vector2, int, Vector2[], Vector2>> GjkRayCastProcedure =
             new List<Tuple<Vector2, Vector2, int, Vector2[], Vector2>>();
 
+        public static readonly List<(Vector2, Vector2, Vector2, Vector2)> MprProcedure =
+            new List<(Vector2, Vector2, Vector2, Vector2)>();
+
         internal static void Clear()
         {
             DebugPoints.Clear();
@@ -61,6 +64,11 @@ namespace ViLAWAVE.Echollision
         {
             GjkRayCastProcedure.Add(
                 new Tuple<Vector2, Vector2, int, Vector2[], Vector2>(x, p, vertexCount, setX.ToArray(), v));
+        }
+
+        internal static void DrawMprProcedure(Vector2 v0, Vector2 v1, Vector2 v2, Vector2 v3)
+        {
+            MprProcedure.Add((v0, v1, v2, v3));
         }
 
         internal static void UpdateIterationCounter(int count)

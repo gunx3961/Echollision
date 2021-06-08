@@ -9,10 +9,15 @@ namespace ViLAWAVE.Echollision
 {
     public static class Collision
     {
+        // TODO: configuration
         private const float ToleranceGjk = 1e-6f; // [van der Bergen 2003] P.143
         private const float RelativeErrorBound = 0.001f; // 0.1%
-
         private const float ToleranceMpr = 1e-6f;
+
+#if DEBUG_DRAW
+        // TODO: Debug info
+        public static int Foobar = 1;
+#endif
 
         /// <summary>
         /// Distance query.
@@ -334,6 +339,12 @@ namespace ViLAWAVE.Echollision
             ICollider b, in Transform transformB
         )
         {
+#if DEBUG_DRAW
+            DebugDraw.Clear();
+            DebugDraw.DrawString("origin", Vector2.Zero);
+            DebugDraw.DrawPoint(Vector2.Zero);
+#endif
+
             var centerA = a.WorldCenter(transformA);
             var centerB = b.WorldCenter(transformB);
             var v0 = centerB - centerA;
@@ -370,6 +381,11 @@ namespace ViLAWAVE.Echollision
                 // Origin is outside of the support plane
                 if (Vector2.Dot(supportDirection, v3) < 0f) return false;
 
+#if DEBUG_DRAW
+                DebugDraw.UpdateIterationCounter(i);
+                DebugDraw.DrawMprProcedure(v0, v1, v2, v3);
+#endif
+
                 supportDirection = v3 - v0;
                 ToPositiveNormal(ref supportDirection);
                 var v0v3NormalSign = Math.Sign(Vector2.Dot(supportDirection, originRay));
@@ -381,7 +397,7 @@ namespace ViLAWAVE.Echollision
                 if (v0v1NormalSign * v0v3NormalSign == 1) v1 = v3;
                 else v2 = v3;
             }
-            
+
             return false;
         }
 
