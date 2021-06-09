@@ -250,7 +250,7 @@ namespace ViLAWAVE.Echollision
         /// <param name="b">Object B.</param>
         /// <param name="transformB">The transform of object B.</param>
         /// <returns>Whether two objects intersect.</returns>
-        public static bool Intersection(
+        public static bool IntersectionLegacy(
             ICollider a, in Transform transformA,
             ICollider b, in Transform transformB
         )
@@ -343,7 +343,7 @@ namespace ViLAWAVE.Echollision
         /// <param name="b">Object B.</param>
         /// <param name="transformB">The transform of object B.</param>
         /// <returns>Whether two objects intersect.</returns>
-        public static bool IntersectionNew(
+        public static bool Intersection(
             ICollider a, in Transform transformA,
             ICollider b, in Transform transformB
         )

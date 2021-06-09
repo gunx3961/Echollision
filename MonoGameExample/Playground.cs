@@ -52,12 +52,12 @@ namespace MonoGameExample
             var obPosition = new Vector2(300, 700);
             ob.Set(new Transform2D {Position = obPosition, Rotation = 0f});
             ob.Set(new Obstruction {Speed = 240f, AngularSpeed = 1.1f * MathF.PI});
-            
+
             ob = World.CreateEntity();
             obPosition = new Vector2(860, 650);
             ob.Set(new Transform2D {Position = obPosition, Rotation = 0f});
             ob.Set(new Obstruction {Speed = 240f, AngularSpeed = 0.55f * MathF.PI});
-            
+
             ob = World.CreateEntity();
             obPosition = new Vector2(1200, 240);
             ob.Set(new Transform2D {Position = obPosition, Rotation = 0f});
@@ -177,7 +177,8 @@ namespace MonoGameExample
 
                 var isHit = false;
                 var t = float.MaxValue;
-                var n = Vector2.One;
+                var hitNormal = Vector2.One;
+                var penetrationNormal = Vector2.One;
 
                 for (var o = 0; o < obs.Length; o += 1)
                 {
@@ -190,28 +191,42 @@ namespace MonoGameExample
                     if (!(tempHit && tempT < t)) continue;
                     isHit = true;
                     t = tempT;
-                    n = tempN;
-                }
-                
-                bullet.Start = transform.Position;
-                if (isHit)
-                {
-                    bullet.IsHit = true;
-                    var hitPoint = transform.Position + translation * t;
-                    bullet.Hit = hitPoint;
+                    // Already contact, resolve penetration
+                    if (tempT == 0f)
+                    {
+                        Collision.PenetrationDepth(_bulletCollider, transform.ToCollisionTransform(),
+                            _obstructionCollider, obTransform, out penetrationNormal, out var d);
+                    }
 
-                    var reflection = Vector2.Reflect(hitPoint - transform.Position, Vector2.Normalize(n));
+                    hitNormal = tempN;
+                }
+
+                bullet.Start = transform.Position;
+                if (!isHit)
+                {
+                    bullet.IsTurning = false;
+                    transform.Position += translation;
+                }
+                // Contact in future
+                else if (t > 0)
+                {
+                    bullet.IsTurning = true;
+                    var hitPoint = transform.Position + translation * t;
+                    bullet.TurnPoint = hitPoint;
+
+                    var reflection = Vector2.Reflect(hitPoint - transform.Position, Vector2.Normalize(hitNormal));
                     bullet.Orientation = reflection;
                     transform.Position = hitPoint + (1f - t) * Vector2.Normalize(reflection) * bullet.Speed *
                         (float) gameTime.ElapsedGameTime.TotalSeconds;
-                    
-                    // transform.Position = hitPoint + (1f - t) * Vector2.Normalize(n) * bullet.Speed *
-                    //     (float) gameTime.ElapsedGameTime.TotalSeconds;
                 }
+                // Already contact, resolve penetration
                 else
                 {
-                    bullet.IsHit = false;
-                    transform.Position += translation;
+                    // Simple resolving
+                    bullet.IsTurning = false;
+                    bullet.Orientation = Vector2.Normalize(penetrationNormal);
+                    transform.Position += bullet.Orientation * bullet.Speed *
+                                          (float) gameTime.ElapsedGameTime.TotalSeconds;
                 }
             }
         }
@@ -244,10 +259,11 @@ namespace MonoGameExample
             {
                 ref var bullet = ref bullets[i].Get<Bullet>();
                 ref var transform = ref bullets[i].Get<Transform2D>();
-                if (bullet.IsHit)
+                if (bullet.IsTurning)
                 {
-                    SpriteBatch.DrawLine(bullet.Start.ToXnaVector2(), bullet.Hit.ToXnaVector2(), Color.Aqua);
-                    SpriteBatch.DrawLine(bullet.Hit.ToXnaVector2(), transform.Position.ToXnaVector2(), Color.Aqua);
+                    SpriteBatch.DrawLine(bullet.Start.ToXnaVector2(), bullet.TurnPoint.ToXnaVector2(), Color.Aqua);
+                    SpriteBatch.DrawLine(bullet.TurnPoint.ToXnaVector2(), transform.Position.ToXnaVector2(),
+                        Color.Aqua);
                 }
                 else
                 {
