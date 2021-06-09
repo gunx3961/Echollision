@@ -19,6 +19,10 @@ namespace ViLAWAVE.Echollision
 
         public static readonly List<(Vector2, Vector2, Vector2, Vector2)> MprProcedure =
             new List<(Vector2, Vector2, Vector2, Vector2)>();
+        
+        public static Vector2 PenetrationA { get; private set; } = Vector2.Zero;
+        public static Vector2 PenetrationB { get; private set; } = Vector2.Zero;
+        public static Vector2 PenetrationNormal { get; private set; } = Vector2.One;
 
         internal static void Clear()
         {
@@ -70,6 +74,13 @@ namespace ViLAWAVE.Echollision
         internal static void DrawMprProcedure(Vector2 v0, Vector2 v1, Vector2 v2, Vector2 v3)
         {
             MprProcedure.Add((v0, v1, v2, v3));
+        }
+
+        internal static void DrawPenetration(Vector2 aPoint, Vector2 bPoint, Vector2 normal)
+        {
+            PenetrationA = aPoint;
+            PenetrationB = bPoint;
+            PenetrationNormal = normal;
         }
 
         internal static void UpdateIterationCounter(int count)

@@ -12,7 +12,8 @@ namespace ViLAWAVE.Echollision
         // TODO: configuration
         private const float ToleranceGjk = 1e-6f; // [van der Bergen 2003] P.143
         private const float RelativeErrorBound = 0.001f; // 0.1%
-        private const float ToleranceMpr = 1e-3f;
+        
+        private const float ToleranceMpr = 0.01f; // This is just enough
 
 #if DEBUG_DRAW
         // TODO: Debug info
@@ -130,7 +131,7 @@ namespace ViLAWAVE.Echollision
         /// <param name="transformB">The transform of object B.</param>
         /// <param name="translationB">The movement will be applied to object B.</param>
         /// <param name="t">Hit parameter a.k.a. time.</param>
-        /// <param name="normal">Normal at hit point.</param>
+        /// <param name="normal">Normal at hit point, of which length is not guaranteed to be 1.</param>
         /// <returns>Whether will collide.</returns>
         public static bool Continuous(
             ICollider a, in Transform transformA, Vector2 translationA,
@@ -334,6 +335,14 @@ namespace ViLAWAVE.Echollision
             return false;
         }
 
+        /// <summary>
+        /// Intersection detection.
+        /// </summary>
+        /// <param name="a">Object A.</param>
+        /// <param name="transformA">The transform of object A.</param>
+        /// <param name="b">Object B.</param>
+        /// <param name="transformB">The transform of object B.</param>
+        /// <returns>Whether two objects intersect.</returns>
         public static bool IntersectionNew(
             ICollider a, in Transform transformA,
             ICollider b, in Transform transformB
@@ -378,15 +387,15 @@ namespace ViLAWAVE.Echollision
                 if (Vector2.Dot(supportDirection, v1) >= 0f) return true;
 
                 var v3 = b.WorldSupport(transformB, supportDirection) - a.WorldSupport(transformA, -supportDirection);
-                
+
 #if DEBUG_DRAW
                 DebugDraw.UpdateIterationCounter(i);
                 DebugDraw.DrawMprProcedure(v0, v1, v2, v3);
 #endif
-                
+
                 // Origin is outside of the support plane
                 if (Vector2.Dot(supportDirection, v3) < 0f) return false;
-                
+
                 // Termination {support plane is closed enough to portal}
                 // From what I have observed, MPR works very well even without this termination via tolerance.
                 // Max refinement count limitation performs just like a relative error bound.
@@ -399,8 +408,9 @@ namespace ViLAWAVE.Echollision
                 var v0v3NormalSign = Math.Sign(Vector2.Dot(supportDirection, originRay));
 
                 // Origin is at v0-v3 direction
+                // TODO: is this possible?
                 if (v0v3NormalSign == 0) return originRay.LengthSquared() <= (v0 - v3).LengthSquared();
-                
+
                 // Choose new portal
                 // Determine new v1 and v2 via two normal signs
                 if (v0v1NormalSign * v0v3NormalSign == 1) v1 = v3;
@@ -410,12 +420,146 @@ namespace ViLAWAVE.Echollision
             return false;
         }
 
-        // Penetration Depth Query via MPR
-        private static void ContinueToQueryPenetrationDepth(
+        /// <summary>
+        /// Resolve penetration depth and contact normal.
+        /// </summary>
+        /// <param name="a">Object A.</param>
+        /// <param name="transformA">The transform of object A.</param>
+        /// <param name="b">Object B.</param>
+        /// <param name="transformB">The transform of object B.</param>
+        /// <param name="normal">Contact normal from B to A, of which length is not guaranteed to be 1.</param>
+        /// <param name="depth">Penetration depth.</param>
+        public static void PenetrationDepth(
             ICollider a, in Transform transformA,
-            ICollider b, in Transform transformB
+            ICollider b, in Transform transformB,
+            out Vector2 normal, out float depth
         )
         {
+#if DEBUG_DRAW
+            DebugDraw.Clear();
+            DebugDraw.DrawString("origin", Vector2.Zero);
+            DebugDraw.DrawPoint(Vector2.Zero);
+#endif
+            var centerA = a.WorldCenter(transformA);
+            var centerB = b.WorldCenter(transformB);
+            var v0 = centerB - centerA;
+
+            // We simply use origin ray as the direction for resolving contact.
+            // If the centers of two objects overlap, use following strategy to resolve:
+            // sample support point of B-A in several direction and just find the 
+            // closest point as the contact point, the contactPoint-v0 as contact normal.
+            // TODO: proper deep penetration resolving strategy.
+            if (v0 == Vector2.Zero)
+            {
+                Span<Vector2> sampleDirections = stackalloc Vector2[]
+                {
+                    new Vector2(0f, -1f), new Vector2(1f, 0f), new Vector2(0f, 1f), new Vector2(-1f, 0f)
+                };
+
+                var minSupport = Vector2.Zero;
+                var minLengthSquared = float.MaxValue;
+                for (var i = 0; i < sampleDirections.Length; i += 1)
+                {
+                    var support = b.WorldSupport(transformB, sampleDirections[i]) -
+                                  a.WorldSupport(transformA, -sampleDirections[i]);
+                    var lengthSquared = support.LengthSquared();
+                    if (!(lengthSquared < minLengthSquared)) continue;
+
+                    minLengthSquared = lengthSquared;
+                    minSupport = support;
+                }
+
+                normal = minSupport;
+                depth = MathF.Sqrt(minLengthSquared);
+#if DEBUG_DRAW
+                var aPoint = a.WorldSupport(transformA, -normal);
+                var bPoint = b.WorldSupport(transformB, normal);
+                DebugDraw.DrawPenetration(aPoint, bPoint, normal);
+#endif
+                return;
+            }
+
+            var originRay = -v0;
+            var v1 = b.WorldSupport(transformB, originRay) - a.WorldSupport(transformA, -originRay);
+            var v0v1 = v1 - v0;
+
+            var supportDirection = v0v1;
+            ToPositiveNormal(ref supportDirection);
+            var v0v1NormalSign = Math.Sign(Vector2.Dot(supportDirection, originRay));
+
+            // Origin is at v0-v1 direction
+            if (v0v1NormalSign == 0)
+            {
+                depth = v0v1.Length() - originRay.Length();
+                normal = originRay;
+#if DEBUG_DRAW
+                var aPoint = a.WorldSupport(transformA, -supportDirection);
+                var bPoint = b.WorldSupport(transformB, supportDirection);
+                DebugDraw.DrawPenetration(aPoint, bPoint, normal);
+#endif
+                return;
+            }
+
+            supportDirection *= v0v1NormalSign;
+            var v2 = b.WorldSupport(transformB, supportDirection) - a.WorldSupport(transformA, -supportDirection);
+
+            // Do refinement until portal reaches the boundary
+            const int maxRefinement = 256;
+            var k = 0;
+            while (k++ < maxRefinement)
+            {
+                supportDirection = (v1 - v2) * v0v1NormalSign;
+                ToPositiveNormal(ref supportDirection);
+
+                var v3 = b.WorldSupport(transformB, supportDirection) - a.WorldSupport(transformA, -supportDirection);
+
+#if DEBUG_DRAW
+                DebugDraw.UpdateIterationCounter(k);
+                DebugDraw.DrawMprProcedure(v0, v1, v2, v3);
+#endif
+                // Portal reaches the boundary
+                var portalToSupportPlane = Vector2.Dot(Vector2.Normalize(supportDirection), v3 - v1);
+                if (portalToSupportPlane <= ToleranceMpr)
+                {
+                    normal = Vector2.Normalize(supportDirection);
+                    depth = Vector2.Dot(v3, normal);
+#if DEBUG_DRAW
+                    var aPoint = a.WorldSupport(transformA, -supportDirection);
+                    var bPoint = b.WorldSupport(transformB, supportDirection);
+                    DebugDraw.DrawPenetration(aPoint, bPoint, normal);
+#endif
+                    return;
+                }
+
+                supportDirection = v3 - v0;
+                ToPositiveNormal(ref supportDirection);
+                var v0v3NormalSign = Math.Sign(Vector2.Dot(supportDirection, originRay));
+
+                // Origin is at v0-v3 direction
+                if (v0v3NormalSign == 0)
+                {
+                    depth = (v0 - v3).Length() - originRay.Length();
+                    normal = originRay;
+#if DEBUG_DRAW
+                    var aPoint = a.WorldSupport(transformA, -supportDirection);
+                    var bPoint = b.WorldSupport(transformB, supportDirection);
+                    DebugDraw.DrawPenetration(aPoint, bPoint, normal);
+#endif
+                    return;
+                }
+
+                // Choose new portal
+                // Determine new v1 and v2 via two normal signs
+                if (v0v1NormalSign * v0v3NormalSign == 1) v1 = v3;
+                else v2 = v3;
+            }
+
+            // Cannot be here
+#if DEBUG_DRAW
+            throw new ApplicationException("Unexpected error.");
+#endif
+            normal = Vector2.Zero;
+            depth = 0f;
         }
 
         #region MPR Utils

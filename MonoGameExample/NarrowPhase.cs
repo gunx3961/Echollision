@@ -30,7 +30,7 @@ namespace MonoGameExample
         public NarrowPhase(Framework framework) : base(framework)
         {
         }
-        
+
         private readonly Color _bgColor = new Color(30, 30, 30);
 
         private ControlMode _controlMode = ControlMode.None;
@@ -45,11 +45,11 @@ namespace MonoGameExample
         private int _debugCursor = 0;
 
         // Position
-        private Vector2 _positionABase = new Vector2(-500, 469);
+        private Vector2 _positionABase = new Vector2(500, 469);
         private Vector2 _positionAControl = Vector2.Zero;
         private Vector2 PositionA => _positionABase + _positionAControl;
 
-        private Vector2 _positionBBase = new Vector2(1000, 250);
+        private Vector2 _positionBBase = new Vector2(500, 250);
         private Vector2 _positionBControl = Vector2.Zero;
         private Vector2 PositionB => _positionBBase + _positionBControl;
 
@@ -73,17 +73,6 @@ namespace MonoGameExample
         private Transform TransformBWithCurrentMovement =>
             new Transform((PositionB + _movementB * Ratio).ToSystemVector2(), 0);
 
-
-        // public Game1()
-        // {
-        //     _graphics = new GraphicsDeviceManager(this);
-        //     _graphics.SynchronizeWithVerticalRetrace = false;
-        //     IsFixedTimeStep = true;
-        //     TargetElapsedTime = TimeSpan.FromMilliseconds(1000f / 60);
-        //     Content.RootDirectory = "Content";
-        //     IsMouseVisible = true;
-        // }
-
         public override void Initialize()
         {
             var normals = new System.Numerics.Vector2[SampleRate];
@@ -98,34 +87,34 @@ namespace MonoGameExample
 
             _sampleNormals = normals;
 
-            _colliderA = new SphereCollider(1000);
-            // _colliderA = new ConvexCollider(new SystemVector2[]
-            // {
-            //     new SystemVector2(-200, -100),
-            //     new SystemVector2(200, -100),
-            //     new SystemVector2(100, 100),
-            // });
-            //
-            // _colliderA = new ConvexHullCollider(new ICollider[]
-            // {
-            //     new SphereCollider(200),
-            //     new ConvexCollider(new SystemVector2[]
-            //     {
-            //         new SystemVector2(-200, -100),
-            //         new SystemVector2(200, -100),
-            //         new SystemVector2(100, 100),
-            //     })
-            // });
+            _colliderA = new SphereCollider(65535);
+            _colliderA = new ConvexCollider(new SystemVector2[]
+            {
+                new SystemVector2(-200, -100),
+                new SystemVector2(200, -100),
+                new SystemVector2(100, 100),
+            });
 
-            _colliderB = new SphereCollider(1000);
-            // _colliderB = new SphereCollider(0);
-            // _colliderB = new ConvexCollider(new SystemVector2[]
-            // {
-            //     new SystemVector2(-100, -100),
-            //     new SystemVector2(100, -100),
-            //     new SystemVector2(100, 100),
-            //     new SystemVector2(-100, 100)
-            // });
+            _colliderA = new ConvexHullCollider(new ICollider[]
+            {
+                new SphereCollider(200),
+                new ConvexCollider(new SystemVector2[]
+                {
+                    new SystemVector2(-200, -100),
+                    new SystemVector2(200, -100),
+                    new SystemVector2(100, 100),
+                })
+            });
+
+            _colliderB = new SphereCollider(39610);
+            _colliderB = new SphereCollider(0);
+            _colliderB = new ConvexCollider(new SystemVector2[]
+            {
+                new SystemVector2(-100, -100),
+                new SystemVector2(100, -100),
+                new SystemVector2(100, 100),
+                new SystemVector2(-100, 100)
+            });
 
             base.Initialize();
         }
@@ -144,7 +133,7 @@ namespace MonoGameExample
             {
                 Framework.ScreenManager.LaunchMainMenu();
             }
-                
+
             // Debug cursor
             if (Framework.KeyboardState.WasKeyJustDown(Keys.R)) _debugCursor = 0;
 
@@ -227,7 +216,10 @@ namespace MonoGameExample
                     break;
             }
 
-            _isCollide = Collision.IntersectionNew(_colliderA, TransformA, _colliderB, TransformB);
+            // _isCollide = Collision.IntersectionNew(_colliderA, TransformA, _colliderB, TransformB);
+            Collision.PenetrationDepth(_colliderA, TransformA, _colliderB, TransformB, out var normal, out var depth);
+            _isCollide = depth >= 0;
+            _distance = depth;
             // _distance = Collision.Distance(_colliderA, TransformA, _colliderB, TransformB);
             // _isCollide = Collision.Continuous(_colliderA, TransformA, _movementA.ToSystemVector2(), _colliderB,
             //     TransformB, _movementB.ToSystemVector2(), out var t, out var normal);
@@ -396,7 +388,8 @@ namespace MonoGameExample
             const string note = "@ ViLAWAVE.Echollision Hybrid Collision Detection";
             var noteSize = DefaultFont.MeasureString(note);
             SpriteBatch.DrawString(DefaultFont, note,
-                Framework.LogicalSize.ToVector2() - noteSize * 2 - new Vector2(0, DefaultFont.LineSpacing), Color.LightGray,
+                Framework.LogicalSize.ToVector2() - noteSize * 2 - new Vector2(0, DefaultFont.LineSpacing),
+                Color.LightGray,
                 0,
                 Vector2.Zero, 2, SpriteEffects.None, 0);
 
@@ -527,13 +520,13 @@ namespace MonoGameExample
                         break;
                 }
             }
-            
+
             // MPR procedures
             if (DebugDraw.MprProcedure.Count > 0)
             {
                 var procedureIndex = Math.Clamp(_debugCursor, 0, DebugDraw.MprProcedure.Count - 1);
                 var (v0, v1, v2, v3) = DebugDraw.MprProcedure[procedureIndex];
-                
+
                 SpriteBatch.DrawPoint(v0.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
                 SpriteBatch.DrawPoint(v1.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
                 SpriteBatch.DrawPoint(v2.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
@@ -546,12 +539,23 @@ namespace MonoGameExample
                     Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
                 SpriteBatch.DrawString(DefaultFont, "v3", v3.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
                     Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
-                
+
                 SpriteBatch.DrawLine(v0.ToXnaVector2() + debugOrigin, v1.ToXnaVector2() + debugOrigin, Color.Yellow);
                 SpriteBatch.DrawLine(v0.ToXnaVector2() + debugOrigin, v2.ToXnaVector2() + debugOrigin, Color.Yellow);
                 SpriteBatch.DrawLine(v1.ToXnaVector2() + debugOrigin, v2.ToXnaVector2() + debugOrigin, Color.Purple);
             }
-            
+
+            // Penetration
+            SpriteBatch.DrawPoint(DebugDraw.PenetrationA.ToXnaVector2(), ColorA, size: 4f);
+            SpriteBatch.DrawPoint(DebugDraw.PenetrationB.ToXnaVector2(), ColorB, size: 4f);
+            var normalizedNormal = SystemVector2.Normalize(DebugDraw.PenetrationNormal);
+            var planeStart = new Vector2(-normalizedNormal.Y, normalizedNormal.X) * 300;
+            var planeEnd = -planeStart;
+
+            SpriteBatch.DrawLine(planeStart + DebugDraw.PenetrationA.ToXnaVector2(),
+                planeEnd + DebugDraw.PenetrationA.ToXnaVector2(), Color.LightPink);
+            SpriteBatch.DrawLine(planeStart + DebugDraw.PenetrationB.ToXnaVector2(),
+                planeEnd + DebugDraw.PenetrationB.ToXnaVector2(), Color.LightPink);
         }
     }
 }
