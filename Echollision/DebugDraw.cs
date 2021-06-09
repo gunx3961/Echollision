@@ -27,6 +27,7 @@ namespace ViLAWAVE.Echollision
             DebugStrings.Clear();
             GjkProcedure.Clear();
             GjkRayCastProcedure.Clear();
+            MprProcedure.Clear();
             IterationCounter = 0;
         }
 

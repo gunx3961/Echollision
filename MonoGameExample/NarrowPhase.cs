@@ -45,11 +45,11 @@ namespace MonoGameExample
         private int _debugCursor = 0;
 
         // Position
-        private Vector2 _positionABase = new Vector2(196, 469);
+        private Vector2 _positionABase = new Vector2(-500, 469);
         private Vector2 _positionAControl = Vector2.Zero;
         private Vector2 PositionA => _positionABase + _positionAControl;
 
-        private Vector2 _positionBBase = new Vector2(420, 250);
+        private Vector2 _positionBBase = new Vector2(1000, 250);
         private Vector2 _positionBControl = Vector2.Zero;
         private Vector2 PositionB => _positionBBase + _positionBControl;
 
@@ -98,34 +98,34 @@ namespace MonoGameExample
 
             _sampleNormals = normals;
 
-            _colliderA = new SphereCollider(100);
-            _colliderA = new ConvexCollider(new SystemVector2[]
-            {
-                new SystemVector2(-200, -100),
-                new SystemVector2(200, -100),
-                new SystemVector2(100, 100),
-            });
+            _colliderA = new SphereCollider(1000);
+            // _colliderA = new ConvexCollider(new SystemVector2[]
+            // {
+            //     new SystemVector2(-200, -100),
+            //     new SystemVector2(200, -100),
+            //     new SystemVector2(100, 100),
+            // });
+            //
+            // _colliderA = new ConvexHullCollider(new ICollider[]
+            // {
+            //     new SphereCollider(200),
+            //     new ConvexCollider(new SystemVector2[]
+            //     {
+            //         new SystemVector2(-200, -100),
+            //         new SystemVector2(200, -100),
+            //         new SystemVector2(100, 100),
+            //     })
+            // });
 
-            _colliderA = new ConvexHullCollider(new ICollider[]
-            {
-                new SphereCollider(200),
-                new ConvexCollider(new SystemVector2[]
-                {
-                    new SystemVector2(-200, -100),
-                    new SystemVector2(200, -100),
-                    new SystemVector2(100, 100),
-                })
-            });
-
-            // _colliderB = new SphereCollider(200);
+            _colliderB = new SphereCollider(1000);
             // _colliderB = new SphereCollider(0);
-            _colliderB = new ConvexCollider(new SystemVector2[]
-            {
-                new SystemVector2(-100, -100),
-                new SystemVector2(100, -100),
-                new SystemVector2(100, 100),
-                new SystemVector2(-100, 100)
-            });
+            // _colliderB = new ConvexCollider(new SystemVector2[]
+            // {
+            //     new SystemVector2(-100, -100),
+            //     new SystemVector2(100, -100),
+            //     new SystemVector2(100, 100),
+            //     new SystemVector2(-100, 100)
+            // });
 
             base.Initialize();
         }
@@ -417,7 +417,9 @@ namespace MonoGameExample
         {
             // B-A
             var debugOrigin = DebugOrigin;
-            DrawMinkowskiDifference(_colliderA, TransformA, _colliderB, TransformB,
+            // DrawMinkowskiDifference(_colliderA, TransformA, _colliderB, TransformB,
+            //     debugOrigin, _isCollide ? ColorCollision : ColorBSubA);
+            DrawMinkowskiDifference(_colliderB, TransformB, _colliderA, TransformA,
                 debugOrigin, _isCollide ? ColorCollision : ColorBSubA);
 
             // Distance
@@ -544,6 +546,10 @@ namespace MonoGameExample
                     Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
                 SpriteBatch.DrawString(DefaultFont, "v3", v3.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
                     Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
+                
+                SpriteBatch.DrawLine(v0.ToXnaVector2() + debugOrigin, v1.ToXnaVector2() + debugOrigin, Color.Yellow);
+                SpriteBatch.DrawLine(v0.ToXnaVector2() + debugOrigin, v2.ToXnaVector2() + debugOrigin, Color.Yellow);
+                SpriteBatch.DrawLine(v1.ToXnaVector2() + debugOrigin, v2.ToXnaVector2() + debugOrigin, Color.Purple);
             }
             
         }
