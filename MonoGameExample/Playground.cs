@@ -7,7 +7,6 @@ using MonoGame.Extended;
 using MonoGame.Extended.Input;
 using MonoGameExample.Ecs;
 using ViLAWAVE.Echollision;
-using ViLAWAVE.Echollision.Collider;
 using Vector2 = System.Numerics.Vector2;
 
 namespace MonoGameExample
@@ -24,9 +23,9 @@ namespace MonoGameExample
         private EntitySet _obstructionSet;
         private EntitySet _bulletSet;
 
-        private SphereCollider _bulletCollider;
+        private Collider _bulletCollider;
         private Vector2[] _obstructionVerts;
-        private ConvexCollider _obstructionCollider;
+        private Collider _obstructionCollider;
 
         private Random _randomSequence = new Random();
 

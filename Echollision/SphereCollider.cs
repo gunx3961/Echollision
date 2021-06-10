@@ -1,8 +1,8 @@
 ﻿using System.Numerics;
 
-namespace ViLAWAVE.Echollision.Collider
+namespace ViLAWAVE.Echollision
 {
-    public class SphereCollider : ICollider
+    public class SphereCollider : Collider
     {
         /// <summary>
         /// Create a sphere collider in specific radius.
@@ -13,9 +13,12 @@ namespace ViLAWAVE.Echollision.Collider
             _radius = radius;
         }
         
-        public Vector2 Center => Vector2.Zero;
+        internal override Vector2 Center()
+        {
+            return Vector2.Zero;
+        }
 
-        public Vector2 Support(Vector2 direction)
+        internal override Vector2 Support(Vector2 direction)
         {
             return _radius * Vector2.Normalize(direction);
         }

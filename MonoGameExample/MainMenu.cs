@@ -5,7 +5,6 @@ using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.Input;
 using MonoGameExample.Ecs;
 using ViLAWAVE.Echollision;
-using ViLAWAVE.Echollision.Collider;
 
 
 namespace MonoGameExample

@@ -1,29 +1,26 @@
 ﻿using System.Numerics;
 
-namespace ViLAWAVE.Echollision.Collider
+namespace ViLAWAVE.Echollision
 {
-    public class ConvexCollider : ICollider
+    public class ConvexCollider : Collider
     {
         public ConvexCollider(Vector2[] vertices)
         {
             _vertices = vertices;
         }
 
-        public Vector2 Center
+        internal override Vector2 Center()
         {
-            get
+            var center = _vertices[0];
+            for (var i = 1; i < _vertices.Length; i += 1)
             {
-                var center = _vertices[0];
-                for (var i = 1; i < _vertices.Length; i += 1)
-                {
-                    center += _vertices[i];
-                }
-
-                return center / _vertices.Length;
+                center += _vertices[i];
             }
+
+            return center / _vertices.Length;
         }
 
-        public Vector2 Support(Vector2 direction)
+        internal override Vector2 Support(Vector2 direction)
         {
             var support = _vertices[0];
             var max = support;

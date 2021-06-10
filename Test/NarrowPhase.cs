@@ -2,7 +2,6 @@ using System;
 using Xunit;
 using System.Numerics;
 using ViLAWAVE.Echollision;
-using ViLAWAVE.Echollision.Collider;
 
 namespace Test
 {

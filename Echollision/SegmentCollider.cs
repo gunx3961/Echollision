@@ -1,8 +1,8 @@
 ﻿using System.Numerics;
 
-namespace ViLAWAVE.Echollision.Collider
+namespace ViLAWAVE.Echollision
 {
-    public class SegmentCollider : ICollider
+    public class SegmentCollider : Collider
     {
         /// <summary>
         /// Create a line segment collider of specific endpoints.
@@ -15,9 +15,12 @@ namespace ViLAWAVE.Echollision.Collider
             _b = b;
         }
 
-        public Vector2 Center => (_a + _b) / 2f;
+        internal override Vector2 Center()
+        {
+            return (_a + _b) / 2f;
+        }
 
-        public Vector2 Support(Vector2 direction)
+        internal override Vector2 Support(Vector2 direction)
         {
             return Vector2.Dot(_b - _a, direction) > 0 ? _b : _a;
         }

@@ -3,7 +3,6 @@
 using System;
 using System.Diagnostics;
 using System.Numerics;
-using ViLAWAVE.Echollision.Collider;
 
 namespace ViLAWAVE.Echollision
 {
@@ -29,8 +28,8 @@ namespace ViLAWAVE.Echollision
         /// <param name="transformB">The transform of object B.</param>
         /// <returns>The distance between two objects.</returns>
         public static float Distance(
-            ICollider a, in Transform transformA,
-            ICollider b, in Transform transformB
+            Collider a, in Transform transformA,
+            Collider b, in Transform transformB
         )
         {
             // Distance query via GJK distance algorithm with Signed Volumes distance sub-algorithm
@@ -134,8 +133,8 @@ namespace ViLAWAVE.Echollision
         /// <param name="normal">Normal at hit point, of which length is not guaranteed to be 1.</param>
         /// <returns>Whether will collide.</returns>
         public static bool Continuous(
-            ICollider a, in Transform transformA, Vector2 translationA,
-            ICollider b, in Transform transformB, Vector2 translationB,
+            Collider a, in Transform transformA, Vector2 translationA,
+            Collider b, in Transform transformB, Vector2 translationB,
             out float t, out Vector2 normal
         )
         {
@@ -251,8 +250,8 @@ namespace ViLAWAVE.Echollision
         /// <param name="transformB">The transform of object B.</param>
         /// <returns>Whether two objects intersect.</returns>
         public static bool IntersectionLegacy(
-            ICollider a, in Transform transformA,
-            ICollider b, in Transform transformB
+            Collider a, in Transform transformA,
+            Collider b, in Transform transformB
         )
         {
             // Intersection detection via MPR 
@@ -344,8 +343,8 @@ namespace ViLAWAVE.Echollision
         /// <param name="transformB">The transform of object B.</param>
         /// <returns>Whether two objects intersect.</returns>
         public static bool Intersection(
-            ICollider a, in Transform transformA,
-            ICollider b, in Transform transformB
+            Collider a, in Transform transformA,
+            Collider b, in Transform transformB
         )
         {
 #if DEBUG_DRAW
@@ -430,8 +429,8 @@ namespace ViLAWAVE.Echollision
         /// <param name="normal">Contact normal from B to A, of which length is not guaranteed to be 1.</param>
         /// <param name="depth">Penetration depth.</param>
         public static void PenetrationDepth(
-            ICollider a, in Transform transformA,
-            ICollider b, in Transform transformB,
+            Collider a, in Transform transformA,
+            Collider b, in Transform transformB,
             out Vector2 normal, out float depth
         )
         {
@@ -753,114 +752,6 @@ namespace ViLAWAVE.Echollision
             lambda[0] = cofactor1 / miuMax;
             lambda[1] = cofactor2 / miuMax;
             vertexCount = 2;
-        }
-
-        #endregion
-
-        public static Vector2 WorldSupport(this ICollider shape, in Transform transform, Vector2 normal)
-        {
-            var rotation = Matrix3x2.CreateRotation(transform.Rotation);
-            Matrix3x2.Invert(rotation, out var inverted);
-            var localNormal = Vector2.TransformNormal(normal, inverted);
-            var supportLocal = shape.Support(localNormal);
-            var supportWorld = Vector2.Transform(supportLocal, rotation) + transform.Translation;
-            return supportWorld;
-        }
-
-        private static Vector2 WorldCenter(this ICollider shape, in Transform transform)
-        {
-            var rotation = Matrix3x2.CreateRotation(transform.Rotation);
-            return Vector2.Transform(shape.Center, rotation) + transform.Translation;
-        }
-
-        #region EPA Utils
-
-        // Priority queue implementation via binary heap.
-        private ref struct PriorityQueue
-        {
-            internal PriorityQueue(Span<Entry> buffer)
-            {
-                _buffer = buffer;
-                _i = -1;
-            }
-
-            private readonly Span<Entry> _buffer;
-            private int _i;
-
-            internal void Push(ref Entry e)
-            {
-                _i += 1;
-                _buffer[_i] = e;
-
-                var pos = _i;
-                var thisKey = e.distance;
-                while (pos > 0)
-                {
-                    var parent = Parent(pos);
-                    if (_buffer[parent].distance > thisKey)
-                    {
-                        Swap(parent, pos);
-                    }
-
-                    pos = parent;
-                }
-            }
-
-            internal Entry PopBest()
-            {
-                if (_i < 0) throw new ApplicationException("Cannot pop from empty queue.");
-
-                var best = _buffer[0];
-                _i -= 1;
-                if (_i == -1) return best;
-
-                // TODO: can make it lazy
-                _buffer[0] = _buffer[_i + 1];
-                var pos = 0;
-                while (true)
-                {
-                    var smallest = pos;
-                    var leftChild = LeftChild(smallest);
-                    var rightChild = leftChild + 1;
-
-                    if (leftChild <= _i && _buffer[leftChild].distance < _buffer[smallest].distance)
-                        smallest = leftChild;
-                    if (rightChild <= _i && _buffer[rightChild].distance < _buffer[smallest].distance)
-                        smallest = rightChild;
-
-                    if (smallest == pos) break;
-                    Swap(pos, smallest);
-                    pos = smallest;
-                }
-
-                return best;
-            }
-
-            private void Swap(int a, int b)
-            {
-                var temp = _buffer[a];
-                _buffer[a] = _buffer[b];
-                _buffer[b] = temp;
-            }
-
-            // TODO: make them inline
-            private static int Parent(int i)
-            {
-                return (i - 1) / 2;
-            }
-
-            private static int LeftChild(int i)
-            {
-                return 2 * i + 1;
-            }
-        }
-
-        private struct Entry
-        {
-            public Vector2 y1;
-            public Vector2 y2;
-            public Vector2 v;
-            public float distance;
         }
 
         #endregion

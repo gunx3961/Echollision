@@ -1,5 +1,5 @@
 using Microsoft.Xna.Framework;
-using ViLAWAVE.Echollision.Collider;
+using ViLAWAVE.Echollision;
 
 namespace MonoGameExample
 {

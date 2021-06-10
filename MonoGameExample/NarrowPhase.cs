@@ -5,7 +5,6 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
 using MonoGame.Extended.Input;
 using ViLAWAVE.Echollision;
-using ViLAWAVE.Echollision.Collider;
 using SystemVector2 = System.Numerics.Vector2;
 
 namespace MonoGameExample
@@ -36,12 +35,12 @@ namespace MonoGameExample
         private ControlMode _controlMode = ControlMode.None;
         private ColliderTarget _colliderTarget = ColliderTarget.None;
         private Point _controlAnchor = Point.Zero;
-        private readonly ICollider _pointer = new SphereCollider(0);
+        private readonly Collider _pointer = new SphereCollider(0);
         private bool _isCollide = false;
         private float _distance = 0f;
         private float _time = 1f;
-        private ICollider _colliderA;
-        private ICollider _colliderB;
+        private Collider _colliderA;
+        private Collider _colliderB;
         private int _debugCursor = 0;
 
         // Position
@@ -95,7 +94,7 @@ namespace MonoGameExample
                 new SystemVector2(100, 100),
             });
 
-            _colliderA = new ConvexHullCollider(new ICollider[]
+            _colliderA = new ConvexHullCollider(new Collider[]
             {
                 new SphereCollider(200),
                 new ConvexCollider(new SystemVector2[]
@@ -275,7 +274,7 @@ namespace MonoGameExample
         private ReadOnlyMemory<SystemVector2> _sampleNormals;
         private const int SampleRate = 128;
 
-        private void DrawCollider(ICollider collider, Transform transform, Vector2 offset, Color color)
+        private void DrawCollider(Collider collider, Transform transform, Vector2 offset, Color color)
         {
             Span<Vector2> samplePoints = stackalloc Vector2[_sampleNormals.Length];
 
@@ -290,7 +289,7 @@ namespace MonoGameExample
             DrawShapeOfSamplePoints(samplePoints, color);
         }
 
-        private void DrawCollider(ICollider collider, Transform transform, Vector2 movement, float ratio, Color color)
+        private void DrawCollider(Collider collider, Transform transform, Vector2 movement, float ratio, Color color)
         {
             var offset = movement * ratio;
             DrawCollider(collider, transform, offset, color);
@@ -299,7 +298,7 @@ namespace MonoGameExample
             SpriteBatch.DrawLine(movementStart, movementEnd, color);
         }
 
-        private void DrawMinkowskiDifference(ICollider a, Transform ta, ICollider b, Transform tb, Vector2 originAt,
+        private void DrawMinkowskiDifference(Collider a, Transform ta, Collider b, Transform tb, Vector2 originAt,
             Color color)
         {
             Span<Vector2> samplePoints = stackalloc Vector2[_sampleNormals.Length];
