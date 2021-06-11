@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 
 namespace ViLAWAVE.Echollision
 {
@@ -25,7 +26,7 @@ namespace ViLAWAVE.Echollision
         /// </summary>
         /// <param name="transform">The transform applied to collider.</param>
         /// <returns>The center.</returns>
-        internal Vector2 WorldCenter(in Transform transform)
+        internal Vector2 WorldCenter(in ColliderTransform transform)
         {
             var rotation = Matrix3x2.CreateRotation(transform.Rotation);
             return Vector2.Transform(Center(), rotation) + transform.Translation;
@@ -38,7 +39,7 @@ namespace ViLAWAVE.Echollision
         /// <param name="transform">The transform applied to collider.</param>
         /// <param name="direction">The support direction in world coordinate.</param>
         /// <returns>The support point.</returns>
-        public Vector2 WorldSupport(in Transform transform, Vector2 direction)
+        public Vector2 WorldSupport(in ColliderTransform transform, Vector2 direction)
         {
             var rotation = Matrix3x2.CreateRotation(transform.Rotation);
             Matrix3x2.Invert(rotation, out var inverted);
@@ -47,5 +48,34 @@ namespace ViLAWAVE.Echollision
             var supportWorld = Vector2.Transform(supportLocal, rotation) + transform.Translation;
             return supportWorld;
         }
+
+        /// <summary>
+        /// Initialize bounding information of this collider.<br/>
+        /// Make sure to call this method at proper timing to perform broad phase detection.
+        /// </summary>
+        public void InitializeBounding()
+        {
+            // TODO: better bounding sphere computing
+            var xMin = Support(new Vector2(-1, 0));
+            var xMax = Support(new Vector2(1, 0));
+            var yMin = Support(new Vector2(0, -1));
+            var yMax = Support(new Vector2(0, 1));
+
+            var width = xMax.X - xMin.X;
+            var height = yMax.Y - yMin.Y;
+            _boundingRadius = new Vector2(width, height).Length() / 2f;
+            _boundingCenter = new Vector2((xMin.X + xMax.X) / 2f, (yMin.Y + yMax.Y) / 2f);
+        }
+
+        
+        internal SphereSweptArea SphereSweptArea(in ColliderTransform transform, Vector2 movement)
+        {
+            var center = Vector2.TransformNormal(_boundingCenter, transform.Matrix());
+            var scale = MathF.Max(transform.Scale.X, transform.Scale.Y);
+            return new SphereSweptArea(center, center + movement, _boundingRadius * scale);
+        }
+
+        private float _boundingRadius;
+        private Vector2 _boundingCenter;
     }
 }

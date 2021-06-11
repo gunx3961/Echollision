@@ -62,15 +62,15 @@ namespace MonoGameExample
         private float _ratioControl = 0f;
         private float Ratio => Math.Clamp(_ratioBase + _ratioControl, 0f, 1f);
 
-        private Transform TransformA => new Transform(PositionA.ToSystemVector2(), 0);
+        private ColliderTransform TransformA => new ColliderTransform(PositionA.ToSystemVector2(), 0);
 
-        private Transform TransformAWithCurrentMovement =>
-            new Transform((PositionA + _movementA * Ratio).ToSystemVector2(), 0);
+        private ColliderTransform TransformAWithCurrentMovement =>
+            new ColliderTransform((PositionA + _movementA * Ratio).ToSystemVector2(), 0);
 
-        private Transform TransformB => new Transform(PositionB.ToSystemVector2(), 0);
+        private ColliderTransform TransformB => new ColliderTransform(PositionB.ToSystemVector2(), 0);
 
-        private Transform TransformBWithCurrentMovement =>
-            new Transform((PositionB + _movementB * Ratio).ToSystemVector2(), 0);
+        private ColliderTransform TransformBWithCurrentMovement =>
+            new ColliderTransform((PositionB + _movementB * Ratio).ToSystemVector2(), 0);
 
         public override void Initialize()
         {
@@ -228,7 +228,7 @@ namespace MonoGameExample
 
         private ColliderTarget DetermineTarget(Point mousePosition)
         {
-            var mouseTransform = new Transform(mousePosition.ToVector2().ToSystemVector2(), 0);
+            var mouseTransform = new ColliderTransform(mousePosition.ToVector2().ToSystemVector2(), 0);
             if (Collision.IntersectionLegacy(_pointer, mouseTransform, _colliderA, TransformAWithCurrentMovement))
             {
                 return ColliderTarget.A;
@@ -257,12 +257,12 @@ namespace MonoGameExample
 
             // A
             var translationA = new SystemVector2(PositionA.X, PositionA.Y);
-            var transformA = new Transform(translationA, 0);
+            var transformA = new ColliderTransform(translationA, 0);
             DrawCollider(_colliderA, transformA, _movementA, Ratio, ColorA);
 
             // B
             var translationB = new SystemVector2(PositionB.X, PositionB.Y);
-            var transformB = new Transform(translationB, 0);
+            var transformB = new ColliderTransform(translationB, 0);
             DrawCollider(_colliderB, transformB, _movementB, Ratio, ColorB);
 
             DrawDebug(gameTime);
@@ -274,7 +274,7 @@ namespace MonoGameExample
         private ReadOnlyMemory<SystemVector2> _sampleNormals;
         private const int SampleRate = 128;
 
-        private void DrawCollider(Collider collider, Transform transform, Vector2 offset, Color color)
+        private void DrawCollider(Collider collider, ColliderTransform transform, Vector2 offset, Color color)
         {
             Span<Vector2> samplePoints = stackalloc Vector2[_sampleNormals.Length];
 
@@ -289,7 +289,7 @@ namespace MonoGameExample
             DrawShapeOfSamplePoints(samplePoints, color);
         }
 
-        private void DrawCollider(Collider collider, Transform transform, Vector2 movement, float ratio, Color color)
+        private void DrawCollider(Collider collider, ColliderTransform transform, Vector2 movement, float ratio, Color color)
         {
             var offset = movement * ratio;
             DrawCollider(collider, transform, offset, color);
@@ -298,7 +298,7 @@ namespace MonoGameExample
             SpriteBatch.DrawLine(movementStart, movementEnd, color);
         }
 
-        private void DrawMinkowskiDifference(Collider a, Transform ta, Collider b, Transform tb, Vector2 originAt,
+        private void DrawMinkowskiDifference(Collider a, ColliderTransform ta, Collider b, ColliderTransform tb, Vector2 originAt,
             Color color)
         {
             Span<Vector2> samplePoints = stackalloc Vector2[_sampleNormals.Length];

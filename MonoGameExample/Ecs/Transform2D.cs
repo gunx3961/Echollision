@@ -8,9 +8,9 @@ namespace MonoGameExample.Ecs
         public Vector2 Position;
         public float Rotation;
 
-        public Transform ToCollisionTransform()
+        public ColliderTransform ToCollisionTransform()
         {
-            return new Transform(Position, Rotation);
+            return new ColliderTransform(Position, Rotation);
         }
     }
 }

@@ -28,8 +28,8 @@ namespace ViLAWAVE.Echollision
         /// <param name="transformB">The transform of object B.</param>
         /// <returns>The distance between two objects.</returns>
         public static float Distance(
-            Collider a, in Transform transformA,
-            Collider b, in Transform transformB
+            Collider a, in ColliderTransform transformA,
+            Collider b, in ColliderTransform transformB
         )
         {
             // Distance query via GJK distance algorithm with Signed Volumes distance sub-algorithm
@@ -133,8 +133,8 @@ namespace ViLAWAVE.Echollision
         /// <param name="normal">Normal at hit point, of which length is not guaranteed to be 1.</param>
         /// <returns>Whether will collide.</returns>
         public static bool Continuous(
-            Collider a, in Transform transformA, Vector2 translationA,
-            Collider b, in Transform transformB, Vector2 translationB,
+            Collider a, in ColliderTransform transformA, Vector2 translationA,
+            Collider b, in ColliderTransform transformB, Vector2 translationB,
             out float t, out Vector2 normal
         )
         {
@@ -250,8 +250,8 @@ namespace ViLAWAVE.Echollision
         /// <param name="transformB">The transform of object B.</param>
         /// <returns>Whether two objects intersect.</returns>
         public static bool IntersectionLegacy(
-            Collider a, in Transform transformA,
-            Collider b, in Transform transformB
+            Collider a, in ColliderTransform transformA,
+            Collider b, in ColliderTransform transformB
         )
         {
             // Intersection detection via MPR 
@@ -343,8 +343,8 @@ namespace ViLAWAVE.Echollision
         /// <param name="transformB">The transform of object B.</param>
         /// <returns>Whether two objects intersect.</returns>
         public static bool Intersection(
-            Collider a, in Transform transformA,
-            Collider b, in Transform transformB
+            Collider a, in ColliderTransform transformA,
+            Collider b, in ColliderTransform transformB
         )
         {
 #if DEBUG_DRAW
@@ -429,8 +429,8 @@ namespace ViLAWAVE.Echollision
         /// <param name="normal">Contact normal from B to A, of which length is not guaranteed to be 1.</param>
         /// <param name="depth">Penetration depth.</param>
         public static void PenetrationDepth(
-            Collider a, in Transform transformA,
-            Collider b, in Transform transformB,
+            Collider a, in ColliderTransform transformA,
+            Collider b, in ColliderTransform transformB,
             out Vector2 normal, out float depth
         )
         {
