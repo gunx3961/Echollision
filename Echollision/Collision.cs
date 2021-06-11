@@ -32,7 +32,7 @@ namespace ViLAWAVE.Echollision
             Collider b, in ColliderTransform transformB
         )
         {
-            // Distance query via GJK distance algorithm with Signed Volumes distance sub-algorithm
+            // Distance query by GJK distance algorithm with Signed Volumes distance sub-algorithm
             var k = 0;
 
 #if DEBUG_DRAW
@@ -138,7 +138,7 @@ namespace ViLAWAVE.Echollision
             out float t, out Vector2 normal
         )
         {
-            // Continuous a.k.a. priori collision detection via GJK Ray Cast
+            // Continuous a.k.a. priori collision detection by GJK Ray Cast
 
             var ray = translationB - translationA;
             t = 0f; // Hit parameter a.k.a lambda a.k.a. time
@@ -254,7 +254,7 @@ namespace ViLAWAVE.Echollision
             Collider b, in ColliderTransform transformB
         )
         {
-            // Intersection detection via MPR 
+            // Intersection detection by MPR 
 
             var centerA = a.WorldCenter(transformA);
             var centerB = b.WorldCenter(transformB);
@@ -396,7 +396,7 @@ namespace ViLAWAVE.Echollision
                 if (Vector2.Dot(supportDirection, v3) < 0f) return false;
 
                 // Termination {support plane is closed enough to portal}
-                // From what I have observed, MPR works very well even without this termination via tolerance.
+                // From what I have observed, MPR works very well even without this termination by tolerance.
                 // Max refinement count limitation performs just like a relative error bound.
                 // TODO: termination strategy
                 var portalToSupportPlane = Vector2.Dot(Vector2.Normalize(supportDirection), v3 - v1);
@@ -411,7 +411,7 @@ namespace ViLAWAVE.Echollision
                 if (v0v3NormalSign == 0) return originRay.LengthSquared() <= (v0 - v3).LengthSquared();
 
                 // Choose new portal
-                // Determine new v1 and v2 via two normal signs
+                // Determine new v1 and v2 by two normal signs
                 if (v0v1NormalSign * v0v3NormalSign == 1) v1 = v3;
                 else v2 = v3;
             }
@@ -548,7 +548,7 @@ namespace ViLAWAVE.Echollision
                 }
 
                 // Choose new portal
-                // Determine new v1 and v2 via two normal signs
+                // Determine new v1 and v2 by two normal signs
                 if (v0v1NormalSign * v0v3NormalSign == 1) v1 = v3;
                 else v2 = v3;
             }

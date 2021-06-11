@@ -2,8 +2,13 @@
 Hybrid 2D collision detection for .NET platforms.
 
 ## Features
-- Any collider shape.
-- Continuous a.k.a. priori detection.
+- Support mapping based collider definition.
+- Narrow phase collision detection.
+  - Intersection testing.
+  - Distance query.
+  - Continuous/Priori detection.
+  - Penetration detection.
+- Broad phase collision detection.
 
 ## Target Platforms
 - .NET Standard 2.1
