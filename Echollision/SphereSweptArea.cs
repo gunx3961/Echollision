@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace ViLAWAVE.Echollision
 {
-    internal struct SphereSweptArea
+    public struct SphereSweptArea
     {
         internal SphereSweptArea(Vector2 a, Vector2 b, float r)
         {

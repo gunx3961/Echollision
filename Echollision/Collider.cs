@@ -39,7 +39,7 @@ namespace ViLAWAVE.Echollision
         /// <param name="transform">The transform applied to collider.</param>
         /// <param name="direction">The support direction in world coordinate.</param>
         /// <returns>The support point.</returns>
-        public Vector2 WorldSupport(in ColliderTransform transform, Vector2 direction)
+        internal Vector2 WorldSupport(in ColliderTransform transform, Vector2 direction)
         {
             var rotation = Matrix3x2.CreateRotation(transform.Rotation);
             Matrix3x2.Invert(rotation, out var inverted);
