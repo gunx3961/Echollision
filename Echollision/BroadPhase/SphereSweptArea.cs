@@ -1,14 +1,21 @@
 using System;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Test")]
-[assembly: InternalsVisibleTo("MonoGameExample")]
-[assembly: InternalsVisibleTo("Benchmark")]
-namespace ViLAWAVE.Echollision
+namespace ViLAWAVE.Echollision.BroadPhase
 {
-    internal static class BroadPhase
+    public struct SphereSweptArea
     {
+        internal SphereSweptArea(Vector2 a, Vector2 b, float r)
+        {
+            A = a;
+            B = b;
+            R = r;
+        }
+
+        internal Vector2 A;
+        internal Vector2 B;
+        internal float R;
+        
         internal static bool Intersection(ref SphereSweptArea a, ref SphereSweptArea b)
         {
             var distanceSquared = DistanceSquaredSegmentSegment(ref a.A, ref a.B, ref b.A, ref b.B);

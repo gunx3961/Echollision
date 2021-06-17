@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using BenchmarkDotNet.Attributes;
 using ViLAWAVE.Echollision;
+using ViLAWAVE.Echollision.BroadPhase;
 
 namespace Benchmark
 {
@@ -34,7 +35,7 @@ namespace Benchmark
         [Benchmark]
         public bool Intersection()
         {
-            return BroadPhase.Intersection(ref A, ref B);
+            return SphereSweptArea.Intersection(ref A, ref B);
         }
     }
 }

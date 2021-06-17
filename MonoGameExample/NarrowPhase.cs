@@ -229,12 +229,12 @@ namespace MonoGameExample
         private ColliderTarget DetermineTarget(Point mousePosition)
         {
             var mouseTransform = new ColliderTransform(mousePosition.ToVector2().ToSystemVector2(), 0);
-            if (Collision.IntersectionLegacy(_pointer, mouseTransform, _colliderA, TransformAWithCurrentMovement))
+            if (Collision.Intersection(_pointer, mouseTransform, _colliderA, TransformAWithCurrentMovement))
             {
                 return ColliderTarget.A;
             }
 
-            if (Collision.IntersectionLegacy(_pointer, mouseTransform, _colliderB, TransformBWithCurrentMovement))
+            if (Collision.Intersection(_pointer, mouseTransform, _colliderB, TransformBWithCurrentMovement))
             {
                 return ColliderTarget.B;
             }

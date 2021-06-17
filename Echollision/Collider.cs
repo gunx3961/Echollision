@@ -1,6 +1,11 @@
 ﻿using System;
 using System.Numerics;
+using System.Runtime.CompilerServices;
+using ViLAWAVE.Echollision.BroadPhase;
 
+[assembly: InternalsVisibleTo("Test")]
+[assembly: InternalsVisibleTo("MonoGameExample")]
+[assembly: InternalsVisibleTo("Benchmark")]
 namespace ViLAWAVE.Echollision
 {
     /// <summary>
