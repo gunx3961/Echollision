@@ -16,6 +16,8 @@ namespace MonoGameExample.Ecs
         public Vector2 DestinationPosition;
         public float DestinationRotation;
 
+        public Vector2 Movement => DestinationPosition - Position;
+
         public ColliderTransform ToColliderTransform()
         {
             return new ColliderTransform(Position, Rotation);

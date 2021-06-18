@@ -7,5 +7,6 @@ namespace MonoGameExample.Ecs
     {
         public Collider Collider;
         public SweptBox SweptBox;
+        public SweptCapsule SweptCapsule;
     }
 }

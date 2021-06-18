@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using DefaultEcs;
 using DefaultEcs.System;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended;
 using MonoGame.Extended.Input;
 using MonoGameExample.Ecs;
@@ -26,6 +27,9 @@ namespace MonoGameExample
         private EntitySet _lifeSet;
         private EntitySet _rigidBodySet;
         private EntitySet _hittableSet;
+
+        private List<(int a, int b)> _boxIntersectionBuffer;
+        private List<(int a, int b)> _capsuleIntersectionBuffer;
 
         public override void Initialize()
         {
@@ -73,7 +77,13 @@ namespace MonoGameExample
                 new ActionSystem<GameTime>(DestSystem)
             );
 
-            _renderSystem = new ActionSystem<GameTime>(DrawSystem);
+            _renderSystem = new SequentialSystem<GameTime>(
+                new ActionSystem<GameTime>(DrawSystem),
+                new ActionSystem<GameTime>(UIDrawSystem)
+            );
+
+            _boxIntersectionBuffer = new List<(int a, int b)>(512);
+            _capsuleIntersectionBuffer = new List<(int a, int b)>(512);
         }
 
         private float _lastSpawnTime;
@@ -82,7 +92,8 @@ namespace MonoGameExample
         private void SpawnSystem(GameTime gameTime)
         {
             var currentTime = (float) gameTime.TotalGameTime.TotalSeconds;
-            if (Framework.MouseState.IsButtonUp(MouseButton.Left) || currentTime < _lastSpawnTime + SpawnInterval) return;
+            if (Framework.MouseState.IsButtonUp(MouseButton.Left) ||
+                currentTime < _lastSpawnTime + SpawnInterval) return;
 
             _lastSpawnTime = currentTime;
             var randomCollider = _colliders[_rs.Next(0, _colliders.Count)];
@@ -117,16 +128,19 @@ namespace MonoGameExample
             {
                 ref var rigidBody = ref es[i].Get<RigidBody>();
                 ref var transform = ref es[i].Get<Transform>();
-                transform.DestinationPosition = transform.Position + (float) gameTime.ElapsedGameTime.TotalSeconds * rigidBody.Velocity;
-                transform.DestinationRotation = transform.Rotation + (float) gameTime.ElapsedGameTime.TotalSeconds * rigidBody.AngularVelocity;
+                transform.DestinationPosition = transform.Position +
+                                                (float) gameTime.ElapsedGameTime.TotalSeconds * rigidBody.Velocity;
+                transform.DestinationRotation = transform.Rotation +
+                                                (float) gameTime.ElapsedGameTime.TotalSeconds *
+                                                rigidBody.AngularVelocity;
             }
         }
 
         private void CollisionResolveSystem(GameTime gameTime)
         {
             var es = _hittableSet.GetEntities();
-            
-            Span<SweptBox> boxes = stackalloc SweptBox[es.Length];
+
+            // Span<SweptBox> boxes = stackalloc SweptBox[es.Length];
             for (var i = 0; i < es.Length; i += 1)
             {
                 ref var transform = ref es[i].Get<Transform>();
@@ -136,14 +150,120 @@ namespace MonoGameExample
                 var box = hittable.Collider.SweepBox(colliderTransform, movement);
                 box.Id = es[i].GetHashCode();
                 hittable.SweptBox = box;
-                boxes[i] = box;
+                // boxes[i] = box;
             }
 
-            int CompareX(SweptBox a, SweptBox b) => Math.Sign(a.From.X - b.From.X);
+            Span<Entity> hittableEntities = stackalloc Entity[es.Length];
+            es.CopyTo(hittableEntities);
+
+            int CompareX(Entity a, Entity b) =>
+                Math.Sign(a.Get<Hittable>().SweptBox.From.X - b.Get<Hittable>().SweptBox.From.X);
+
             int CompareY(SweptBox a, SweptBox b) => Math.Sign(a.From.Y - b.From.Y);
 
-            boxes.Sort(CompareX);
-            boxes.Sort(CompareY);
+            hittableEntities.Sort(CompareX); // O(n Log(n))
+
+            _boxIntersectionBuffer.Clear();
+            _capsuleIntersectionBuffer.Clear();
+            for (var i = 0; i < hittableEntities.Length; i += 1)
+            {
+                ref var box = ref hittableEntities[i].Get<Hittable>().SweptBox;
+
+                var j = i + 1;
+                while (j < hittableEntities.Length)
+                {
+                    ref var next = ref hittableEntities[j].Get<Hittable>().SweptBox;
+                    if (next.From.X > box.To.X) break;
+                    j += 1;
+                    if (box.From.Y > next.To.Y || box.To.Y < next.From.Y) continue;
+                    _boxIntersectionBuffer.Add((i, j - 1));
+                }
+            }
+
+            for (var i = 0; i < _boxIntersectionBuffer.Count; i += 1)
+            {
+                var (aIndex, bIndex) = _boxIntersectionBuffer[i];
+                ref var entityA = ref hittableEntities[aIndex];
+                ref var transformA = ref entityA.Get<Transform>();
+                ref var hittableA = ref entityA.Get<Hittable>();
+                var colliderTransformA = transformA.ToColliderTransform();
+                var movementA = transformA.Movement;
+                var capsuleA = hittableA.Collider.SweptCapsule(colliderTransformA, movementA);
+
+                ref var entityB = ref hittableEntities[bIndex];
+                ref var transformB = ref entityB.Get<Transform>();
+                ref var hittableB = ref entityB.Get<Hittable>();
+                var colliderTransformB = transformB.ToColliderTransform();
+                var movementB = transformB.Movement;
+                var capsuleB = hittableB.Collider.SweptCapsule(colliderTransformB, movementB);
+
+                if (!SweptCapsule.Intersection(ref capsuleA, ref capsuleB)) continue;
+                _capsuleIntersectionBuffer.Add((aIndex, bIndex));
+
+                var realCollision = Collision.Continuous(
+                    hittableA.Collider, colliderTransformA, movementA,
+                    hittableB.Collider, colliderTransformB, movementB,
+                    out var toi, out var n
+                );
+
+                if (!realCollision) continue;
+
+                var aHasRigidBody = entityA.Has<RigidBody>();
+                var bHasRigidBody = entityB.Has<RigidBody>();
+                if (!(aHasRigidBody || bHasRigidBody)) continue;
+
+                var t = (float) gameTime.ElapsedGameTime.TotalSeconds;
+                // Resolve penetration
+                if (toi == 0f)
+                {
+                    Collision.PenetrationDepth(
+                        hittableA.Collider, colliderTransformA,
+                        hittableB.Collider, colliderTransformB,
+                        out n, out var depth
+                    );
+
+                    if (aHasRigidBody)
+                    {
+                        ref var rigidBody = ref entityA.Get<RigidBody>();
+                        var newVel = rigidBody.Velocity.Length() * System.Numerics.Vector2.Normalize(n);
+                        transformA.DestinationPosition = transformA.Position + t * newVel;
+                        rigidBody.Velocity = newVel;
+                    }
+
+                    if (bHasRigidBody)
+                    {
+                        ref var rigidBody = ref entityB.Get<RigidBody>();
+                        var newVel = rigidBody.Velocity.Length() * System.Numerics.Vector2.Normalize(-n);
+                        transformB.DestinationPosition = transformB.Position + t * newVel;
+                        rigidBody.Velocity = newVel;
+                    }
+                }
+                // Resolve priori collision
+                else
+                {
+                    if (aHasRigidBody)
+                    {
+                        ref var rigidBody = ref entityA.Get<RigidBody>();
+                        var hitPoint = transformA.Position + rigidBody.Velocity * toi * t;
+                        var newVel = System.Numerics.Vector2.Normalize(n) * rigidBody.Velocity.Length();
+                        transformA.DestinationPosition = hitPoint + newVel * (1f - toi) * t;
+                        rigidBody.Velocity = newVel;
+                    }
+
+                    if (bHasRigidBody)
+                    {
+                        ref var rigidBody = ref entityB.Get<RigidBody>();
+                        var hitPoint = transformB.Position + rigidBody.Velocity * toi * t;
+                        var newVel = System.Numerics.Vector2.Normalize(-n) * rigidBody.Velocity.Length();
+                        transformB.DestinationPosition = hitPoint + newVel * (1f - toi) * t;
+                        rigidBody.Velocity = newVel;
+                    }
+                }
+            }
+
+            _info.ObjectCount = es.Length;
+            _info.BoxIntersectionCount = _boxIntersectionBuffer.Count;
+            _info.CapsuleIntersectionCount = _capsuleIntersectionBuffer.Count;
         }
 
         private void DestSystem(GameTime gameTime)
@@ -156,6 +276,31 @@ namespace MonoGameExample
             }
         }
 
+        private struct Info
+        {
+            public int ObjectCount;
+            public int BoxIntersectionCount;
+            public int CapsuleIntersectionCount;
+        }
+
+        private Info _info;
+
+        private void UIDrawSystem(GameTime gameTime)
+        {
+            var font = Framework.Resource.GetFont(GlobalResource.Font.DefaultPixel);
+            var pos = new Vector2(16);
+            var lineHeight = new Vector2(0, 16);
+            SpriteBatch.DrawString(font,
+                $"Object: {_info.ObjectCount.ToString()}, n^2: {(_info.ObjectCount * _info.ObjectCount).ToString()}",
+                pos, Color.White, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
+            pos += lineHeight;
+            SpriteBatch.DrawString(font, $"Box Intersection: {_info.BoxIntersectionCount.ToString()}", pos, Color.White,
+                0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
+            pos += lineHeight;
+            SpriteBatch.DrawString(font, $"Capsule Intersection: {_info.CapsuleIntersectionCount.ToString()}", pos,
+                Color.White, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
+        }
+
         private void DrawSystem(GameTime gameTime)
         {
             var es = _rigidBodySet.GetEntities();
@@ -163,13 +308,13 @@ namespace MonoGameExample
             {
                 ref var transform = ref es[i].Get<Transform>();
                 SpriteBatch.DrawCircle(transform.Position.ToXnaVector2(), 32f, 16, Color.White);
-                
+
                 if (es[i].Has<Hittable>())
                 {
                     ref var hittable = ref es[i].Get<Hittable>();
                     var boundingSphere = hittable.Collider.BoundingSphere(transform.ToColliderTransform());
                     SpriteBatch.DrawCircle(boundingSphere.Center.ToXnaVector2(), boundingSphere.Radius, 16, Color.Aqua);
-                    
+
                     ref var box = ref hittable.SweptBox;
                     var pos = box.From.ToXnaVector2();
                     var size = (box.To - box.From).ToXnaVector2();
