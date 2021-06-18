@@ -41,7 +41,7 @@ namespace MonoGameExample
             size = text.MeasureString(DefaultFont);
             collider = ColliderFactory.Rect(size);
             boardPhaseButton.Set(collider);
-            boardPhaseButton.Set<Action>(() => { Framework.ScreenManager.LaunchNarrowPhase(); });
+            boardPhaseButton.Set<Action>(() => { Framework.ScreenManager.LaunchBroadPhase(); });
 
 
             var playgroundButton = World.CreateEntity();

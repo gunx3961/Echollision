@@ -15,11 +15,11 @@ namespace Benchmark
         private readonly Random _rs = new Random();
 
         [ParamsSource(nameof(RandomSphereSweptArea))]
-        public SphereSweptArea A;
+        public SweptCapsule A;
         [ParamsSource(nameof(RandomSphereSweptArea))]
-        public SphereSweptArea B;
+        public SweptCapsule B;
         
-        public IEnumerable<SphereSweptArea> RandomSphereSweptArea()
+        public IEnumerable<SweptCapsule> RandomSphereSweptArea()
         {
             for (var i = 0; i < N; i += 1)
             {
@@ -28,14 +28,14 @@ namespace Benchmark
                 var b = new Vector2(Min + (float) _rs.NextDouble() * range, Min + (float) _rs.NextDouble() * range);
                 var radius = Min + (float) _rs.NextDouble() * range;
 
-                yield return new SphereSweptArea(a, b, radius);
+                yield return new SweptCapsule(a, b, radius);
             }
         }
 
         [Benchmark]
         public bool Intersection()
         {
-            return SphereSweptArea.Intersection(ref A, ref B);
+            return SweptCapsule.Intersection(ref A, ref B);
         }
     }
 }

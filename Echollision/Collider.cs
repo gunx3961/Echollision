@@ -72,12 +72,47 @@ namespace ViLAWAVE.Echollision
             _boundingCenter = new Vector2((xMin.X + xMax.X) / 2f, (yMin.Y + yMax.Y) / 2f);
         }
 
+        internal BoundingSphere BoundingSphere(in ColliderTransform transform)
+        {
+            var center = Vector2.Transform(_boundingCenter, transform.Matrix());
+            var scale = MathF.Max(transform.Scale.X, transform.Scale.Y);
+            return new BoundingSphere {Center = center, Radius = _boundingRadius * scale};
+        }
         
-        internal SphereSweptArea SphereSweptArea(in ColliderTransform transform, Vector2 movement)
+        internal SweptCapsule SweptCapsule(in ColliderTransform transform, Vector2 movement)
         {
             var center = Vector2.TransformNormal(_boundingCenter, transform.Matrix());
             var scale = MathF.Max(transform.Scale.X, transform.Scale.Y);
-            return new SphereSweptArea(center, center + movement, _boundingRadius * scale);
+            return new SweptCapsule(center, center + movement, _boundingRadius * scale);
+        }
+
+        internal SweptBox SweepBox(in ColliderTransform transform, Vector2 movement)
+        {
+            var center = Vector2.Transform(_boundingCenter, transform.Matrix());
+            var b = new SweptBox {From = center, To = center};
+            if (movement.X > 0f)
+            {
+                b.From.X -= _boundingRadius;
+                b.To.X += movement.X + _boundingRadius;
+            }
+            else
+            {
+                b.From.X += movement.X - _boundingRadius;
+                b.To.X += _boundingRadius;
+            }
+
+            if (movement.Y > 0f)
+            {
+                b.From.Y -= _boundingRadius;
+                b.To.Y += movement.Y + _boundingRadius;
+            }
+            else
+            {
+                b.From.Y += movement.Y - _boundingRadius;
+                b.To.Y += _boundingRadius;
+            }
+
+            return b;
         }
 
         private float _boundingRadius;

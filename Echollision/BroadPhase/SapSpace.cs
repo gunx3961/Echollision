@@ -14,17 +14,17 @@ namespace ViLAWAVE.Echollision.BroadPhase
             const int initialCaseCapacity = 32;
             _intersectionCases = new Dictionary<int, List<int>>(initialCaseCapacity);
 
-            _boxBuffer = new List<SapBox[]>();
-            var firstChunk = new SapBox[boxChunkSize];
+            _boxBuffer = new List<SweptBox[]>();
+            var firstChunk = new SweptBox[boxChunkSize];
             _boxBuffer.Add(firstChunk);
         }
         
         private readonly Dictionary<int, List<int>> _intersectionCases;
         
         private const int boxChunkSize = 512;
-        private readonly List<SapBox[]> _boxBuffer;
+        private readonly List<SweptBox[]> _boxBuffer;
 
-        private ref SapBox GetBox(int index)
+        private ref SweptBox GetBox(int index)
         {
             var chunk = _boxBuffer[index / boxChunkSize];
             return ref chunk[index % boxChunkSize];

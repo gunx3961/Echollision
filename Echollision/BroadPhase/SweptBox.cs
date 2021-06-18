@@ -2,10 +2,10 @@ using System.Numerics;
 
 namespace ViLAWAVE.Echollision.BroadPhase
 {
-    public struct SapBox
+    public struct SweptBox
     {
-        public Vector2 A;
-        public Vector2 B;
+        public Vector2 From;
+        public Vector2 To;
         public int Id;
     }
 }

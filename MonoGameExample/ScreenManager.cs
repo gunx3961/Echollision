@@ -22,6 +22,11 @@ namespace MonoGameExample
             LaunchScreen(new MainMenu(_framework));
         }
 
+        public void LaunchBroadPhase()
+        {
+            LaunchScreen(new BroadPhase(_framework));
+        }
+
         public void LaunchPlayground()
         {
             LaunchScreen(new Playground(_framework));

@@ -3,9 +3,9 @@ using System.Numerics;
 
 namespace ViLAWAVE.Echollision.BroadPhase
 {
-    public struct SphereSweptArea
+    public struct SweptCapsule
     {
-        internal SphereSweptArea(Vector2 a, Vector2 b, float r)
+        internal SweptCapsule(Vector2 a, Vector2 b, float r)
         {
             A = a;
             B = b;
@@ -16,7 +16,7 @@ namespace ViLAWAVE.Echollision.BroadPhase
         internal Vector2 B;
         internal float R;
         
-        internal static bool Intersection(ref SphereSweptArea a, ref SphereSweptArea b)
+        internal static bool Intersection(ref SweptCapsule a, ref SweptCapsule b)
         {
             var distanceSquared = DistanceSquaredSegmentSegment(ref a.A, ref a.B, ref b.A, ref b.B);
             var r = a.R + b.R;
