@@ -129,19 +129,19 @@ namespace ViLAWAVE.Echollision
         /// <param name="b">Object B.</param>
         /// <param name="transformB">The transform of object B.</param>
         /// <param name="translationB">The movement will be applied to object B.</param>
-        /// <param name="t">Hit parameter a.k.a. time.</param>
-        /// <param name="normal">Normal at hit point, of which length is not guaranteed to be 1.</param>
+        /// <param name="toi">Time of impact.</param>
+        /// <param name="normal">Normal at hit point from B to A, of which length is not guaranteed to be 1.</param>
         /// <returns>Whether will collide.</returns>
         public static bool Continuous(
             Collider a, in ColliderTransform transformA, Vector2 translationA,
             Collider b, in ColliderTransform transformB, Vector2 translationB,
-            out float t, out Vector2 normal
+            out float toi, out Vector2 normal
         )
         {
             // Continuous a.k.a. priori collision detection by GJK Ray Cast
 
             var ray = translationB - translationA;
-            t = 0f; // Hit parameter a.k.a lambda a.k.a. time
+            toi = 0f; // Hit parameter a.k.a lambda a.k.a. time
             var x = Vector2.Zero; // Source is the origin
             normal = Vector2.Zero;
 
@@ -190,11 +190,11 @@ namespace ViLAWAVE.Echollision
                 {
                     var vDotR = Vector2.Dot(v, ray);
                     if (vDotR >= 0f) return false;
-                    t = t - vDotW / vDotR;
+                    toi = toi - vDotW / vDotR;
                     // Of course
-                    if (t > 1f) return false;
-                    x = t * ray;
-                    normal = v;
+                    if (toi > 1f) return false;
+                    x = toi * ray;
+                    normal = -v;
                 }
 
                 // Be careful to compute v(conv({x} − Y))
