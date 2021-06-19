@@ -9,6 +9,7 @@ using MonoGame.Extended.Input;
 using MonoGameExample.Ecs;
 using ViLAWAVE.Echollision;
 using ViLAWAVE.Echollision.BroadPhase;
+using SystemVector2 = System.Numerics.Vector2;
 
 namespace MonoGameExample
 {
@@ -54,15 +55,15 @@ namespace MonoGameExample
             yBox.InitializeBounding();
 
             var left = World.CreateEntity();
-            left.Set(new Transform(new System.Numerics.Vector2(-y * 0.5f, y * 0.5f)));
+            left.Set(new Transform(new SystemVector2(-y * 0.5f, y * 0.5f)));
             left.Set(new Hittable {Collider = yBox});
 
             var right = World.CreateEntity();
-            right.Set(new Transform(new System.Numerics.Vector2(x + y * 0.5f, y * 0.5f)));
+            right.Set(new Transform(new SystemVector2(x + y * 0.5f, y * 0.5f)));
             right.Set(new Hittable {Collider = yBox});
 
             var ground = World.CreateEntity();
-            ground.Set(new Transform(new System.Numerics.Vector2(x * 0.5f, y + x * 0.5f)));
+            ground.Set(new Transform(new SystemVector2(x * 0.5f, y + x * 0.5f)));
             ground.Set(new Hittable {Collider = xBox});
 
             _lifeSet = World.GetEntities().With<Life>().AsSet();
@@ -87,7 +88,7 @@ namespace MonoGameExample
         }
 
         private float _lastSpawnTime;
-        private const float SpawnInterval = 0.1f;
+        private const float SpawnInterval = 0.03f;
 
         private void SpawnSystem(GameTime gameTime)
         {
@@ -104,6 +105,7 @@ namespace MonoGameExample
             _rs.NextUnitVector(out var randomDirection);
             var randomSpeed = _rs.NextSingle(100, 2000);
             var vel = randomDirection.ToSystemVector2() * randomSpeed;
+            // var vel = new SystemVector2(-1, 0.5f) * randomSpeed;
             e.Set(new RigidBody {Velocity = vel, AngularVelocity = 0f});
 
             var spawnPosition = Framework.MouseState.Position.ToVector2().ToSystemVector2();
@@ -221,11 +223,12 @@ namespace MonoGameExample
                         hittableB.Collider, colliderTransformB,
                         out n, out var depth
                     );
-
+                    n = SystemVector2.Normalize(n);
+                    
                     if (aHasRigidBody)
                     {
                         ref var rigidBody = ref entityA.Get<RigidBody>();
-                        var newVel = rigidBody.Velocity.Length() * System.Numerics.Vector2.Normalize(n);
+                        var newVel = rigidBody.Velocity.Length() * n;
                         transformA.DestinationPosition = transformA.Position + t * newVel;
                         rigidBody.Velocity = newVel;
                     }
@@ -233,7 +236,7 @@ namespace MonoGameExample
                     if (bHasRigidBody)
                     {
                         ref var rigidBody = ref entityB.Get<RigidBody>();
-                        var newVel = rigidBody.Velocity.Length() * System.Numerics.Vector2.Normalize(-n);
+                        var newVel = rigidBody.Velocity.Length() * -n;
                         transformB.DestinationPosition = transformB.Position + t * newVel;
                         rigidBody.Velocity = newVel;
                     }
@@ -241,11 +244,20 @@ namespace MonoGameExample
                 // Resolve priori collision
                 else
                 {
+                    n = SystemVector2.Normalize(n);
                     if (aHasRigidBody)
                     {
                         ref var rigidBody = ref entityA.Get<RigidBody>();
                         var hitPoint = transformA.Position + rigidBody.Velocity * toi * t;
-                        var newVel = System.Numerics.Vector2.Normalize(n) * rigidBody.Velocity.Length();
+                        SystemVector2 newVel;
+                        if (SystemVector2.Dot(rigidBody.Velocity, n) <= 0)
+                        {
+                            newVel = SystemVector2.Reflect(rigidBody.Velocity, n);
+                        }
+                        else
+                        {
+                            newVel = SystemVector2.Normalize(SystemVector2.Normalize(rigidBody.Velocity) + n) * rigidBody.Velocity.Length();
+                        }
                         transformA.DestinationPosition = hitPoint + newVel * (1f - toi) * t;
                         rigidBody.Velocity = newVel;
                     }
@@ -254,7 +266,15 @@ namespace MonoGameExample
                     {
                         ref var rigidBody = ref entityB.Get<RigidBody>();
                         var hitPoint = transformB.Position + rigidBody.Velocity * toi * t;
-                        var newVel = System.Numerics.Vector2.Normalize(-n) * rigidBody.Velocity.Length();
+                        SystemVector2 newVel;
+                        if (SystemVector2.Dot(rigidBody.Velocity, n) >= 0)
+                        {
+                            newVel = SystemVector2.Reflect(rigidBody.Velocity, -n);
+                        }
+                        else
+                        {
+                            newVel = SystemVector2.Normalize(SystemVector2.Normalize(rigidBody.Velocity) - n) * rigidBody.Velocity.Length();
+                        }
                         transformB.DestinationPosition = hitPoint + newVel * (1f - toi) * t;
                         rigidBody.Velocity = newVel;
                     }
@@ -314,7 +334,7 @@ namespace MonoGameExample
                     ref var hittable = ref es[i].Get<Hittable>();
                     var boundingSphere = hittable.Collider.BoundingSphere(transform.ToColliderTransform());
                     SpriteBatch.DrawCircle(boundingSphere.Center.ToXnaVector2(), boundingSphere.Radius, 16, Color.Aqua);
-
+                
                     ref var box = ref hittable.SweptBox;
                     var pos = box.From.ToXnaVector2();
                     var size = (box.To - box.From).ToXnaVector2();
