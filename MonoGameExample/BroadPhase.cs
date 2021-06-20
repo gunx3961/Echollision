@@ -51,19 +51,19 @@ namespace MonoGameExample
             var (x, y) = Framework.LogicalSize;
             var xBox = ColliderFactory.Rect(x, x);
             xBox.InitializeBounding();
-            var yBox = ColliderFactory.Rect(new Vector2(y));
+            var yBox = ColliderFactory.Rect(y, y);
             yBox.InitializeBounding();
 
             var left = World.CreateEntity();
-            left.Set(new Transform(new SystemVector2(-y * 0.5f, y * 0.5f)));
+            left.Set(new Transform(new SystemVector2(-y, 0)));
             left.Set(new Hittable {Collider = yBox});
 
             var right = World.CreateEntity();
-            right.Set(new Transform(new SystemVector2(x + y * 0.5f, y * 0.5f)));
+            right.Set(new Transform(new SystemVector2(x, 0)));
             right.Set(new Hittable {Collider = yBox});
 
             var ground = World.CreateEntity();
-            ground.Set(new Transform(new SystemVector2(x * 0.5f, y + x * 0.5f)));
+            ground.Set(new Transform(new SystemVector2(0, y)));
             ground.Set(new Hittable {Collider = xBox});
 
             _lifeSet = World.GetEntities().With<Life>().AsSet();
@@ -329,17 +329,17 @@ namespace MonoGameExample
                 ref var transform = ref es[i].Get<Transform>();
                 SpriteBatch.DrawCircle(transform.Position.ToXnaVector2(), 32f, 16, Color.White);
 
-                if (es[i].Has<Hittable>())
-                {
-                    ref var hittable = ref es[i].Get<Hittable>();
-                    var boundingSphere = hittable.Collider.BoundingSphere(transform.ToColliderTransform());
-                    SpriteBatch.DrawCircle(boundingSphere.Center.ToXnaVector2(), boundingSphere.Radius, 16, Color.Aqua);
-                
-                    ref var box = ref hittable.SweptBox;
-                    var pos = box.From.ToXnaVector2();
-                    var size = (box.To - box.From).ToXnaVector2();
-                    SpriteBatch.DrawRectangle(pos, size, Color.Yellow);
-                }
+                // if (es[i].Has<Hittable>())
+                // {
+                //     ref var hittable = ref es[i].Get<Hittable>();
+                //     var boundingSphere = hittable.Collider.BoundingSphere(transform.ToColliderTransform());
+                //     SpriteBatch.DrawCircle(boundingSphere.Center.ToXnaVector2(), boundingSphere.Radius, 16, Color.Aqua);
+                //
+                //     ref var box = ref hittable.SweptBox;
+                //     var pos = box.From.ToXnaVector2();
+                //     var size = (box.To - box.From).ToXnaVector2();
+                //     SpriteBatch.DrawRectangle(pos, size, Color.Yellow);
+                // }
             }
         }
 
