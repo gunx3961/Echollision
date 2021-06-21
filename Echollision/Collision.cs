@@ -154,6 +154,7 @@ namespace ViLAWAVE.Echollision
             normal = Vector2.Zero;
 
             // Initial v = x − “arbitrary point in C”
+            // TODO: no minus
             var v = -(a.WorldSupport(transformA, Vector2.UnitX) - b.WorldSupport(transformB, -Vector2.UnitX));
 
 #if COLLISION_DEBUG
@@ -206,8 +207,8 @@ namespace ViLAWAVE.Echollision
                 for (i = 0; i < pCount; i += 1)
                 {
                     xMinusY[i] = x - setP[i];
-                    lookup[i].p = setP[i];
                     lookup[i].xMinusP = xMinusY[i];
+                    lookup[i].p = setP[i];
                 }
 
                 var isNewP = true;
@@ -221,8 +222,8 @@ namespace ViLAWAVE.Echollision
                 if (isNewP)
                 {
                     xMinusY[pCount] = x - p;
+                    lookup[pCount].xMinusP = xMinusY[pCount];
                     lookup[pCount].p = p;
-                    lookup[pCount].xMinusP = xMinusY[i];
                     pCount += 1;
                 }
 
@@ -236,6 +237,7 @@ namespace ViLAWAVE.Echollision
                     {
                         if (xMinusY[i] != lookup[j].xMinusP) continue;
                         setP[i] = lookup[j].p;
+                        break;
                     }
                 }
             }

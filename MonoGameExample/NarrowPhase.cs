@@ -589,20 +589,20 @@ namespace MonoGameExample
                 switch (p.VertexCount)
                 {
                     case 2:
-                        SpriteBatch.DrawLine(p.SetX[0].ToXnaVector2() + debugOrigin,
-                            p.SetX[1].ToXnaVector2() + debugOrigin,
+                        SpriteBatch.DrawLine(p.SetP[0].ToXnaVector2() + debugOrigin,
+                            p.SetP[1].ToXnaVector2() + debugOrigin,
                             Color.White);
                         break;
 
                     case 3:
-                        SpriteBatch.DrawLine(p.SetX[0].ToXnaVector2() + debugOrigin,
-                            p.SetX[1].ToXnaVector2() + debugOrigin,
+                        SpriteBatch.DrawLine(p.SetP[0].ToXnaVector2() + debugOrigin,
+                            p.SetP[1].ToXnaVector2() + debugOrigin,
                             Color.White);
-                        SpriteBatch.DrawLine(p.SetX[1].ToXnaVector2() + debugOrigin,
-                            p.SetX[2].ToXnaVector2() + debugOrigin,
+                        SpriteBatch.DrawLine(p.SetP[1].ToXnaVector2() + debugOrigin,
+                            p.SetP[2].ToXnaVector2() + debugOrigin,
                             Color.White);
-                        SpriteBatch.DrawLine(p.SetX[2].ToXnaVector2() + debugOrigin,
-                            p.SetX[0].ToXnaVector2() + debugOrigin,
+                        SpriteBatch.DrawLine(p.SetP[2].ToXnaVector2() + debugOrigin,
+                            p.SetP[0].ToXnaVector2() + debugOrigin,
                             Color.White);
                         break;
                 }

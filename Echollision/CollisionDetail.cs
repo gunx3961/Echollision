@@ -17,7 +17,7 @@ namespace ViLAWAVE.Echollision
         public Vector2 X;
         public Vector2 P;
         public int VertexCount;
-        public Vector2[] SetX;
+        public Vector2[] SetP;
         public Vector2 V;
     }
 
@@ -66,9 +66,9 @@ namespace ViLAWAVE.Echollision
             GjkProcedures.Add(new GjkProcedure {VertexCount = vertexCount, W = w.ToArray(), V = v, NewW = newW});
         }
 
-        internal void PushGjkRayCastProcedure(Vector2 x, Vector2 p, int vertexCount, Span<Vector2> setX, Vector2 v)
+        internal void PushGjkRayCastProcedure(Vector2 x, Vector2 p, int vertexCount, Span<Vector2> setP, Vector2 v)
         {
-            GjkRayCastProcedures.Add(new GjkRayCastProcedure {X = x, P = p, VertexCount = vertexCount, SetX = setX.ToArray(), V = v});
+            GjkRayCastProcedures.Add(new GjkRayCastProcedure {X = x, P = p, VertexCount = vertexCount, SetP = setP.ToArray(), V = v});
         }
 
         internal void PushMprProcedure(Vector2 v0, Vector2 v1, Vector2 v2, Vector2 v3)
