@@ -1,5 +1,3 @@
-#define COLLISION_DEBUG
-
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -48,7 +46,7 @@ namespace MonoGameExample
 
         private struct PenetrationResult
         {
-            public float Dpeth;
+            public float Depth;
             public SystemVector2 Normal;
         }
 
@@ -76,13 +74,9 @@ namespace MonoGameExample
         private PenetrationResult _penetrationResult;
         private ContinuousResult _continuousResult;
 
-        // private bool _isCollide = false;
-        // private float _distance = 0f;
-        // private float _time = 1f;
-
         private Collider _colliderA;
         private Collider _colliderB;
-        private int _debugCursor = 0;
+        private int _debugCursor;
 
         // Position
         private Vector2 _positionABase = new Vector2(500, 469);
@@ -276,7 +270,7 @@ namespace MonoGameExample
                 case DetectMode.Penetration:
                     Framework.Collision.Penetration(_colliderA, TransformA, _colliderB, TransformB, out var pn, out var depth);
                     _penetrationResult.Normal = pn;
-                    _penetrationResult.Dpeth = depth;
+                    _penetrationResult.Depth = depth;
                     break;
 
                 case DetectMode.Continuous:
@@ -308,6 +302,7 @@ namespace MonoGameExample
         private static readonly Color ColorB = Color.Orange;
         private static readonly Color ColorCso = Color.White;
         private static readonly Color ColorCollision = Color.Yellow;
+        private static readonly Color ColorNormal = new Color(0.8f, 0.8f, 0.8f);
 
         public override void Draw(GameTime gameTime)
         {
@@ -418,7 +413,8 @@ namespace MonoGameExample
                 DetectMode.Intersection => "INTERSECTION",
                 DetectMode.Distance => "DISTANCE",
                 DetectMode.Penetration => "PENETRATION",
-                DetectMode.Continuous => "CONTINUOUS"
+                DetectMode.Continuous => "CONTINUOUS",
+                _ => throw new ArgumentOutOfRangeException()
             };
 
             SpriteBatch.DrawString(DefaultFont, mode, stringPosition, Color.White, 0, Vector2.Zero, 4, SpriteEffects.None, 0);
@@ -440,8 +436,8 @@ namespace MonoGameExample
             var fps = Math.Ceiling(1.0 / gameTime.ElapsedGameTime.TotalSeconds);
             var fpsText = $"FPS:{fps.ToString()}";
             stringPosition = new Vector2(Framework.LogicalSize.X, DefaultFont.LineSpacing * 6) -
-                             DefaultFont.MeasureString(fpsText) * 2f;
-            SpriteBatch.DrawString(DefaultFont, fpsText, stringPosition, Color.LightGray, 0, Vector2.Zero, 2,
+                             DefaultFont.MeasureString(fpsText) * 4f;
+            SpriteBatch.DrawString(DefaultFont, fpsText, stringPosition, Color.LightGray, 0, Vector2.Zero, 4,
                 SpriteEffects.None, 0);
 
             const string note = "@ ViLAWAVE.Echollision Hybrid Collision Detection";
@@ -457,18 +453,18 @@ namespace MonoGameExample
 
         private void DrawResult(GameTime gameTime)
         {
-            // A
+            // A & B
             var translationA = new SystemVector2(PositionA.X, PositionA.Y);
             var transformA = new ColliderTransform(translationA, 0);
-            DrawCollider(_colliderA, transformA, _movementA, Ratio, ColorA);
-
-            // B
             var translationB = new SystemVector2(PositionB.X, PositionB.Y);
             var transformB = new ColliderTransform(translationB, 0);
+            DrawCollider(_colliderA, transformA, _movementA, Ratio, ColorA);
             DrawCollider(_colliderB, transformB, _movementB, Ratio, ColorB);
 
             // CSO
             var debugOrigin = DebugOrigin;
+            DrawCross(debugOrigin, Color.LightGreen);
+            
             switch (_detectMode)
             {
                 // MPR: B-A
@@ -478,7 +474,7 @@ namespace MonoGameExample
                     break;
                 case DetectMode.Penetration:
                     DrawMinkowskiDifference(_colliderB, TransformB, _colliderA, TransformA,
-                        debugOrigin, _penetrationResult.Dpeth >= 0 ? ColorCollision : ColorCso);
+                        debugOrigin, _penetrationResult.Depth >= 0 ? ColorCollision : ColorCso);
                     break;
 
                 // GJK: A-B
@@ -492,276 +488,149 @@ namespace MonoGameExample
                     break;
             }
 
-
-            // GJK procedures
-            if (DebugDraw.GjkProcedure.Count > 0)
+            var detail = Framework.Collision.Detail;
+            const int ratioBarThickness = 10;
+            // Iteration counter
+            var counterPosition = new Vector2(0, Framework.LogicalSize.Y - DefaultFont.LineSpacing * 3 - ratioBarThickness);
+            SpriteBatch.DrawString(DefaultFont, $"k: {detail.IterationCounter.ToString()}", counterPosition,
+                ColorNormal, 0f, Vector2.Zero, 3f, SpriteEffects.None, 0);
+            
+            // Result & context
+            switch (_detectMode)
             {
-                var procedureIndex = Math.Clamp(_debugCursor, 0, DebugDraw.GjkProcedure.Count - 1);
-                var (simplexVertexCount, w, v, newW) = DebugDraw.GjkProcedure[procedureIndex];
-                switch (simplexVertexCount)
+                case DetectMode.Penetration:
+                    counterPosition.Y -= DefaultFont.LineSpacing * 2;
+                    SpriteBatch.DrawString(DefaultFont, $"Depth: {_penetrationResult.Depth.ToString()}", counterPosition,
+                        ColorNormal, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
+                    
+                    SpriteBatch.DrawPoint(detail.PenetrationContext.PointA.ToXnaVector2(), ColorA, size: 4f);
+                    SpriteBatch.DrawPoint(detail.PenetrationContext.PointB.ToXnaVector2(), ColorB, size: 4f);
+                    var normalizedNormal = SystemVector2.Normalize(detail.PenetrationContext.Normal);
+                    var planeStart = new Vector2(-normalizedNormal.Y, normalizedNormal.X) * 300;
+                    var planeEnd = -planeStart;
+
+                    SpriteBatch.DrawLine(planeStart + detail.PenetrationContext.PointA.ToXnaVector2(),
+                        planeEnd + detail.PenetrationContext.PointA.ToXnaVector2(), Color.LightPink);
+                    SpriteBatch.DrawLine(planeStart + detail.PenetrationContext.PointB.ToXnaVector2(),
+                        planeEnd + detail.PenetrationContext.PointB.ToXnaVector2(), Color.LightPink);
+                    break;
+
+                case DetectMode.Distance:
+                    counterPosition.Y -= DefaultFont.LineSpacing * 2;
+                    SpriteBatch.DrawString(DefaultFont, $"Distance: {_distanceResult.Distance.ToString()}", counterPosition,
+                        ColorNormal, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
+                    break;
+                
+                case DetectMode.Continuous:
+                    counterPosition.Y -= DefaultFont.LineSpacing * 2;
+                    SpriteBatch.DrawString(DefaultFont, $"TOI: {_continuousResult.Toi.ToString()}", counterPosition,
+                        ColorNormal, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
+
+                    // Ray
+                    var rayEnd = SystemVector2.Normalize(detail.GjkRayCastContext.Ray) * 1000;
+                    SpriteBatch.DrawLine(debugOrigin, debugOrigin + rayEnd.ToXnaVector2(), Color.Green);
+                    
+                    var lineColor = Ratio > _continuousResult.Toi ? Color.Yellow : Color.LightGray;
+                    var barStart = new Vector2(0, Framework.LogicalSize.Y - ratioBarThickness);
+                    var barEnd = new Vector2(Framework.LogicalSize.X * Ratio, Framework.LogicalSize.Y - ratioBarThickness);
+                    SpriteBatch.DrawLine(barStart, barEnd, lineColor, ratioBarThickness);
+
+                    break;
+            }
+            
+            // GJK procedures
+            if (detail.GjkProcedures.Count > 0)
+            {
+                var procedureIndex = Math.Clamp(_debugCursor, 0, detail.GjkProcedures.Count - 1);
+                var p = detail.GjkProcedures[procedureIndex];
+                switch (p.VertexCount)
                 {
                     case 1:
-                        SpriteBatch.DrawPoint(v.ToXnaVector2() + debugOrigin, Color.Yellow, size: 5f);
-                        SpriteBatch.DrawPoint(newW.ToXnaVector2() + debugOrigin, Color.Red, size: 5f);
+                        SpriteBatch.DrawPoint(p.V.ToXnaVector2() + debugOrigin, Color.Yellow, size: 5f);
+                        SpriteBatch.DrawPoint(p.NewW.ToXnaVector2() + debugOrigin, Color.Red, size: 5f);
                         break;
 
                     case 2:
-                        SpriteBatch.DrawLine(w[0].ToXnaVector2() + debugOrigin, w[1].ToXnaVector2() + debugOrigin,
+                        SpriteBatch.DrawLine(p.W[0].ToXnaVector2() + debugOrigin, p.W[1].ToXnaVector2() + debugOrigin,
                             Color.Yellow);
-                        SpriteBatch.DrawPoint(v.ToXnaVector2() + debugOrigin, Color.Yellow, size: 5f);
-                        SpriteBatch.DrawPoint(newW.ToXnaVector2() + debugOrigin, Color.Red, size: 5f);
+                        SpriteBatch.DrawPoint(p.V.ToXnaVector2() + debugOrigin, Color.Yellow, size: 5f);
+                        SpriteBatch.DrawPoint(p.NewW.ToXnaVector2() + debugOrigin, Color.Red, size: 5f);
                         break;
 
                     case 3:
-                        SpriteBatch.DrawLine(w[0].ToXnaVector2() + debugOrigin, w[1].ToXnaVector2() + debugOrigin,
+                        SpriteBatch.DrawLine(p.W[0].ToXnaVector2() + debugOrigin, p.W[1].ToXnaVector2() + debugOrigin,
                             Color.Yellow);
-                        SpriteBatch.DrawLine(w[1].ToXnaVector2() + debugOrigin, w[2].ToXnaVector2() + debugOrigin,
+                        SpriteBatch.DrawLine(p.W[1].ToXnaVector2() + debugOrigin, p.W[2].ToXnaVector2() + debugOrigin,
                             Color.Yellow);
-                        SpriteBatch.DrawLine(w[2].ToXnaVector2() + debugOrigin, w[0].ToXnaVector2() + debugOrigin,
+                        SpriteBatch.DrawLine(p.W[2].ToXnaVector2() + debugOrigin, p.W[0].ToXnaVector2() + debugOrigin,
                             Color.Yellow);
-                        SpriteBatch.DrawPoint(v.ToXnaVector2() + debugOrigin, Color.Yellow, size: 5f);
-                        SpriteBatch.DrawPoint(newW.ToXnaVector2() + debugOrigin, Color.Red, size: 5f);
+                        SpriteBatch.DrawPoint(p.V.ToXnaVector2() + debugOrigin, Color.Yellow, size: 5f);
+                        SpriteBatch.DrawPoint(p.NewW.ToXnaVector2() + debugOrigin, Color.Red, size: 5f);
                         break;
                 }
             }
 
             // GJK Ray Cast procedures
-            if (DebugDraw.GjkRayCastProcedure.Count > 0)
+            if (detail.GjkRayCastProcedures.Count > 0)
             {
-                var procedureIndex = Math.Clamp(_debugCursor, 0, DebugDraw.GjkRayCastProcedure.Count - 1);
-                var (x, p, vertexCount, setX, v) = DebugDraw.GjkRayCastProcedure[procedureIndex];
-                SpriteBatch.DrawString(DefaultFont, "x", x.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
+                var procedureIndex = Math.Clamp(_debugCursor, 0, detail.GjkRayCastProcedures.Count - 1);
+                var p = detail.GjkRayCastProcedures[procedureIndex];
+                SpriteBatch.DrawString(DefaultFont, "x", p.X.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
                     Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
-                SpriteBatch.DrawString(DefaultFont, "p", p.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
+                SpriteBatch.DrawString(DefaultFont, "p", p.P.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
                     Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
-                SpriteBatch.DrawLine(x.ToXnaVector2() + debugOrigin, p.ToXnaVector2() + debugOrigin, Color.Yellow);
+                SpriteBatch.DrawLine(p.X.ToXnaVector2() + debugOrigin, p.P.ToXnaVector2() + debugOrigin, Color.Yellow);
 
-                var vInCsoSystem = (x - v).ToXnaVector2();
+                var vInCsoSystem = (p.X - p.V).ToXnaVector2();
                 SpriteBatch.DrawString(DefaultFont, "v", vInCsoSystem + debugOrigin + new Vector2(2, 2),
                     Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
-                SpriteBatch.DrawLine(x.ToXnaVector2() + debugOrigin, vInCsoSystem + debugOrigin, Color.MediumPurple);
+                SpriteBatch.DrawLine(p.X.ToXnaVector2() + debugOrigin, vInCsoSystem + debugOrigin, Color.MediumPurple);
 
-                switch (vertexCount)
+                switch (p.VertexCount)
                 {
                     case 2:
-                        SpriteBatch.DrawLine(setX[0].ToXnaVector2() + debugOrigin,
-                            setX[1].ToXnaVector2() + debugOrigin,
+                        SpriteBatch.DrawLine(p.SetX[0].ToXnaVector2() + debugOrigin,
+                            p.SetX[1].ToXnaVector2() + debugOrigin,
                             Color.White);
                         break;
 
                     case 3:
-                        SpriteBatch.DrawLine(setX[0].ToXnaVector2() + debugOrigin,
-                            setX[1].ToXnaVector2() + debugOrigin,
+                        SpriteBatch.DrawLine(p.SetX[0].ToXnaVector2() + debugOrigin,
+                            p.SetX[1].ToXnaVector2() + debugOrigin,
                             Color.White);
-                        SpriteBatch.DrawLine(setX[1].ToXnaVector2() + debugOrigin,
-                            setX[2].ToXnaVector2() + debugOrigin,
+                        SpriteBatch.DrawLine(p.SetX[1].ToXnaVector2() + debugOrigin,
+                            p.SetX[2].ToXnaVector2() + debugOrigin,
                             Color.White);
-                        SpriteBatch.DrawLine(setX[2].ToXnaVector2() + debugOrigin,
-                            setX[0].ToXnaVector2() + debugOrigin,
+                        SpriteBatch.DrawLine(p.SetX[2].ToXnaVector2() + debugOrigin,
+                            p.SetX[0].ToXnaVector2() + debugOrigin,
                             Color.White);
                         break;
                 }
             }
 
             // MPR procedures
-            if (DebugDraw.MprProcedure.Count > 0)
+            if (detail.MprProcedures.Count > 0)
             {
-                var procedureIndex = Math.Clamp(_debugCursor, 0, DebugDraw.MprProcedure.Count - 1);
-                var (v0, v1, v2, v3) = DebugDraw.MprProcedure[procedureIndex];
+                var procedureIndex = Math.Clamp(_debugCursor, 0, detail.MprProcedures.Count - 1);
+                var p = detail.MprProcedures[procedureIndex];
 
-                SpriteBatch.DrawPoint(v0.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
-                SpriteBatch.DrawPoint(v1.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
-                SpriteBatch.DrawPoint(v2.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
-                SpriteBatch.DrawPoint(v3.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
-                SpriteBatch.DrawString(DefaultFont, "v0", v0.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
+                SpriteBatch.DrawPoint(p.V0.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
+                SpriteBatch.DrawPoint(p.V1.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
+                SpriteBatch.DrawPoint(p.V2.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
+                SpriteBatch.DrawPoint(p.V3.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
+                SpriteBatch.DrawString(DefaultFont, "v0", p.V0.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
                     Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
-                SpriteBatch.DrawString(DefaultFont, "v1", v1.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
+                SpriteBatch.DrawString(DefaultFont, "v1", p.V1.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
                     Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
-                SpriteBatch.DrawString(DefaultFont, "v2", v2.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
+                SpriteBatch.DrawString(DefaultFont, "v2", p.V2.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
                     Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
-                SpriteBatch.DrawString(DefaultFont, "v3", v3.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
+                SpriteBatch.DrawString(DefaultFont, "v3", p.V3.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
                     Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
 
-                SpriteBatch.DrawLine(v0.ToXnaVector2() + debugOrigin, v1.ToXnaVector2() + debugOrigin, Color.Yellow);
-                SpriteBatch.DrawLine(v0.ToXnaVector2() + debugOrigin, v2.ToXnaVector2() + debugOrigin, Color.Yellow);
-                SpriteBatch.DrawLine(v1.ToXnaVector2() + debugOrigin, v2.ToXnaVector2() + debugOrigin, Color.Purple);
+                SpriteBatch.DrawLine(p.V0.ToXnaVector2() + debugOrigin, p.V1.ToXnaVector2() + debugOrigin, Color.Yellow);
+                SpriteBatch.DrawLine(p.V0.ToXnaVector2() + debugOrigin, p.V2.ToXnaVector2() + debugOrigin, Color.Yellow);
+                SpriteBatch.DrawLine(p.V1.ToXnaVector2() + debugOrigin, p.V2.ToXnaVector2() + debugOrigin, Color.Purple);
             }
-
-            // Penetration
-            if (_detectMode == DetectMode.Penetration)
-            {
-                SpriteBatch.DrawPoint(DebugDraw.PenetrationA.ToXnaVector2(), ColorA, size: 4f);
-                SpriteBatch.DrawPoint(DebugDraw.PenetrationB.ToXnaVector2(), ColorB, size: 4f);
-                var normalizedNormal = SystemVector2.Normalize(DebugDraw.PenetrationNormal);
-                var planeStart = new Vector2(-normalizedNormal.Y, normalizedNormal.X) * 300;
-                var planeEnd = -planeStart;
-
-                SpriteBatch.DrawLine(planeStart + DebugDraw.PenetrationA.ToXnaVector2(),
-                    planeEnd + DebugDraw.PenetrationA.ToXnaVector2(), Color.LightPink);
-                SpriteBatch.DrawLine(planeStart + DebugDraw.PenetrationB.ToXnaVector2(),
-                    planeEnd + DebugDraw.PenetrationB.ToXnaVector2(), Color.LightPink);
-            }
-
-            if (_detectMode == DetectMode.Continuous)
-            {
-                const int ratioBarThickness = 10;
-                var lineColor = Ratio > _continuousResult.Toi ? Color.Yellow : Color.LightGray;
-                var barStart = new Vector2(0, Framework.LogicalSize.Y - ratioBarThickness);
-                var barEnd = new Vector2(Framework.LogicalSize.X * Ratio, Framework.LogicalSize.Y - ratioBarThickness);
-                SpriteBatch.DrawLine(barStart, barEnd, lineColor, ratioBarThickness);
-            }
-        }
-
-        private void DrawDebug(GameTime gameTime)
-        {
-            // B-A
-            var debugOrigin = DebugOrigin;
-            // DrawMinkowskiDifference(_colliderA, TransformA, _colliderB, TransformB,
-            //     debugOrigin, _isCollide ? ColorCollision : ColorBSubA);
-            // DrawMinkowskiDifference(_colliderB, TransformB, _colliderA, TransformA,
-            //     debugOrigin, _isCollide ? ColorCollision : ColorCso);
-            //
-            // // Distance
-            // SpriteBatch.DrawString(DefaultFont, $"Distance: {_distance.ToString()}",
-            //     new Vector2(16, Framework.LogicalSize.Y - 36),
-            //     Color.White, 0, Vector2.Zero, 4, SpriteEffects.None, 0);
-
-            // Counter
-            SpriteBatch.DrawString(DefaultFont, $"k: {DebugDraw.IterationCounter.ToString()}",
-                new Vector2(16, Framework.LogicalSize.Y - 68),
-                Color.White, 0, Vector2.Zero, 4, SpriteEffects.None, 0);
-            if (DebugDraw.IterationCounter > 60000)
-            {
-                System.Diagnostics.Debug.WriteLine(
-                    $"PositionA: new Vector2({PositionA.X.ToString()}, {PositionA.Y.ToString()})");
-                System.Diagnostics.Debug.WriteLine(
-                    $"PositionB: new Vector2({PositionB.X.ToString()}, {PositionB.Y.ToString()})");
-            }
-
-            // Debug draws
-            for (var i = 0; i < DebugDraw.DebugLines.Count; i += 2)
-            {
-                SpriteBatch.DrawLine(DebugDraw.DebugLines[i].ToXnaVector2() + debugOrigin,
-                    DebugDraw.DebugLines[i + 1].ToXnaVector2() + debugOrigin, Color.Green);
-            }
-
-            for (var i = 0; i < DebugDraw.DebugPoints.Count; i += 1)
-            {
-                DrawCross(DebugDraw.DebugPoints[i].ToXnaVector2() + debugOrigin, Color.LightGreen);
-            }
-
-
-            for (var i = 0; i < DebugDraw.DebugStrings.Count; i += 1)
-            {
-                SpriteBatch.DrawString(DefaultFont, DebugDraw.DebugStrings[i].Item1,
-                    DebugDraw.DebugStrings[i].Item2.ToXnaVector2() + debugOrigin + new Vector2(2, 2), Color.LightGreen);
-            }
-
-            // GJK procedures
-            if (DebugDraw.GjkProcedure.Count > 0)
-            {
-                var procedureIndex = Math.Clamp(_debugCursor, 0, DebugDraw.GjkProcedure.Count - 1);
-                var (simplexVertexCount, w, v, newW) = DebugDraw.GjkProcedure[procedureIndex];
-                switch (simplexVertexCount)
-                {
-                    case 1:
-                        SpriteBatch.DrawPoint(v.ToXnaVector2() + debugOrigin, Color.Yellow, size: 5f);
-                        SpriteBatch.DrawPoint(newW.ToXnaVector2() + debugOrigin, Color.Red, size: 5f);
-                        break;
-
-                    case 2:
-                        SpriteBatch.DrawLine(w[0].ToXnaVector2() + debugOrigin, w[1].ToXnaVector2() + debugOrigin,
-                            Color.Yellow);
-                        SpriteBatch.DrawPoint(v.ToXnaVector2() + debugOrigin, Color.Yellow, size: 5f);
-                        SpriteBatch.DrawPoint(newW.ToXnaVector2() + debugOrigin, Color.Red, size: 5f);
-                        break;
-
-                    case 3:
-                        SpriteBatch.DrawLine(w[0].ToXnaVector2() + debugOrigin, w[1].ToXnaVector2() + debugOrigin,
-                            Color.Yellow);
-                        SpriteBatch.DrawLine(w[1].ToXnaVector2() + debugOrigin, w[2].ToXnaVector2() + debugOrigin,
-                            Color.Yellow);
-                        SpriteBatch.DrawLine(w[2].ToXnaVector2() + debugOrigin, w[0].ToXnaVector2() + debugOrigin,
-                            Color.Yellow);
-                        SpriteBatch.DrawPoint(v.ToXnaVector2() + debugOrigin, Color.Yellow, size: 5f);
-                        SpriteBatch.DrawPoint(newW.ToXnaVector2() + debugOrigin, Color.Red, size: 5f);
-                        break;
-                }
-            }
-
-            // GJK Ray Cast procedures
-            if (DebugDraw.GjkRayCastProcedure.Count > 0)
-            {
-                var procedureIndex = Math.Clamp(_debugCursor, 0, DebugDraw.GjkRayCastProcedure.Count - 1);
-                var (x, p, vertexCount, setX, v) = DebugDraw.GjkRayCastProcedure[procedureIndex];
-                SpriteBatch.DrawString(DefaultFont, "x", x.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
-                    Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
-                SpriteBatch.DrawString(DefaultFont, "p", p.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
-                    Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
-                SpriteBatch.DrawLine(x.ToXnaVector2() + debugOrigin, p.ToXnaVector2() + debugOrigin, Color.Yellow);
-
-                var vInCsoSystem = (x - v).ToXnaVector2();
-                SpriteBatch.DrawString(DefaultFont, "v", vInCsoSystem + debugOrigin + new Vector2(2, 2),
-                    Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
-                SpriteBatch.DrawLine(x.ToXnaVector2() + debugOrigin, vInCsoSystem + debugOrigin, Color.MediumPurple);
-
-                switch (vertexCount)
-                {
-                    case 2:
-                        SpriteBatch.DrawLine(setX[0].ToXnaVector2() + debugOrigin,
-                            setX[1].ToXnaVector2() + debugOrigin,
-                            Color.White);
-                        break;
-
-                    case 3:
-                        SpriteBatch.DrawLine(setX[0].ToXnaVector2() + debugOrigin,
-                            setX[1].ToXnaVector2() + debugOrigin,
-                            Color.White);
-                        SpriteBatch.DrawLine(setX[1].ToXnaVector2() + debugOrigin,
-                            setX[2].ToXnaVector2() + debugOrigin,
-                            Color.White);
-                        SpriteBatch.DrawLine(setX[2].ToXnaVector2() + debugOrigin,
-                            setX[0].ToXnaVector2() + debugOrigin,
-                            Color.White);
-                        break;
-                }
-            }
-
-            // MPR procedures
-            if (DebugDraw.MprProcedure.Count > 0)
-            {
-                var procedureIndex = Math.Clamp(_debugCursor, 0, DebugDraw.MprProcedure.Count - 1);
-                var (v0, v1, v2, v3) = DebugDraw.MprProcedure[procedureIndex];
-
-                SpriteBatch.DrawPoint(v0.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
-                SpriteBatch.DrawPoint(v1.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
-                SpriteBatch.DrawPoint(v2.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
-                SpriteBatch.DrawPoint(v3.ToXnaVector2() + debugOrigin, Color.Yellow, size: 3f);
-                SpriteBatch.DrawString(DefaultFont, "v0", v0.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
-                    Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
-                SpriteBatch.DrawString(DefaultFont, "v1", v1.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
-                    Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
-                SpriteBatch.DrawString(DefaultFont, "v2", v2.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
-                    Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
-                SpriteBatch.DrawString(DefaultFont, "v3", v3.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
-                    Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
-
-                SpriteBatch.DrawLine(v0.ToXnaVector2() + debugOrigin, v1.ToXnaVector2() + debugOrigin, Color.Yellow);
-                SpriteBatch.DrawLine(v0.ToXnaVector2() + debugOrigin, v2.ToXnaVector2() + debugOrigin, Color.Yellow);
-                SpriteBatch.DrawLine(v1.ToXnaVector2() + debugOrigin, v2.ToXnaVector2() + debugOrigin, Color.Purple);
-            }
-
-            // Penetration
-            SpriteBatch.DrawPoint(DebugDraw.PenetrationA.ToXnaVector2(), ColorA, size: 4f);
-            SpriteBatch.DrawPoint(DebugDraw.PenetrationB.ToXnaVector2(), ColorB, size: 4f);
-            var normalizedNormal = SystemVector2.Normalize(DebugDraw.PenetrationNormal);
-            var planeStart = new Vector2(-normalizedNormal.Y, normalizedNormal.X) * 300;
-            var planeEnd = -planeStart;
-
-            SpriteBatch.DrawLine(planeStart + DebugDraw.PenetrationA.ToXnaVector2(),
-                planeEnd + DebugDraw.PenetrationA.ToXnaVector2(), Color.LightPink);
-            SpriteBatch.DrawLine(planeStart + DebugDraw.PenetrationB.ToXnaVector2(),
-                planeEnd + DebugDraw.PenetrationB.ToXnaVector2(), Color.LightPink);
         }
     }
 }
