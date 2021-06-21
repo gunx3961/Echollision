@@ -56,7 +56,7 @@ namespace ViLAWAVE.Echollision
             var yCount = 0;
             Span<float> lambda = stackalloc float[3];
 
-            while (k < 65535)
+            while (k < 64)
             {
                 k += 1;
                 var w = a.WorldSupport(transformA, -v) - b.WorldSupport(transformB, v);
@@ -164,6 +164,9 @@ namespace ViLAWAVE.Echollision
 
             Span<Vector2> setP = stackalloc Vector2[3];
             Span<Vector2> xMinusY = stackalloc Vector2[3];
+            // To retrieve P from {x} − Y, we cannot just let p = x - (x - p).
+            // Rarely there are cases that x - (x - p) != p because of floating point number precision.
+            // Here I use the simple lookup solution.
             Span<(Vector2 xMinusP, Vector2 p)> lookup = stackalloc (Vector2, Vector2)[3];
             var pCount = 0;
             Span<float> lambda = stackalloc float[3];
@@ -227,13 +230,14 @@ namespace ViLAWAVE.Echollision
                     pCount += 1;
                 }
 
+                var prevPCount = pCount;
                 DistanceSv(ref xMinusY, ref lambda, ref pCount);
                 v = Vector2.Zero;
                 for (i = 0; i < pCount; i += 1)
                 {
                     v += lambda[i] * xMinusY[i];
-                    // get P from {x} − Y
-                    for (var j = 0; j < pCount; j += 1)
+                    // retrieve P from {x} − Y
+                    for (var j = 0; j < prevPCount; j += 1)
                     {
                         if (xMinusY[i] != lookup[j].xMinusP) continue;
                         setP[i] = lookup[j].p;
@@ -519,9 +523,9 @@ namespace ViLAWAVE.Echollision
 
         private static void S2D(ref Span<Vector2> w, ref Span<float> lambda, ref int vertexCount)
         {
-            ref var s1 = ref w[0];
-            ref var s2 = ref w[1];
-            ref var s3 = ref w[2];
+            var s1 = w[0];
+            var s2 = w[1];
+            var s3 = w[2];
 
             var cofactor31 = (s2.X * s3.Y) - (s3.X * s2.Y);
             var cofactor32 = (s3.X * s1.Y) - (s1.X * s3.Y);
@@ -623,8 +627,8 @@ namespace ViLAWAVE.Echollision
 
         private static void S1D(ref Span<Vector2> w, ref Span<float> lambda, ref int vertexCount)
         {
-            ref var s1 = ref w[0];
-            ref var s2 = ref w[1];
+            var s1 = w[0];
+            var s2 = w[1];
 
             var t = s2 - s1;
             var po = Vector2.Dot(-s1, t) / t.LengthSquared() * t + s1;

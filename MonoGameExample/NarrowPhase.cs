@@ -575,16 +575,29 @@ namespace MonoGameExample
             {
                 var procedureIndex = Math.Clamp(_debugCursor, 0, detail.GjkRayCastProcedures.Count - 1);
                 var p = detail.GjkRayCastProcedures[procedureIndex];
-                SpriteBatch.DrawString(DefaultFont, "x", p.X.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
-                    Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
-                SpriteBatch.DrawString(DefaultFont, "p", p.P.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
-                    Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
-                SpriteBatch.DrawLine(p.X.ToXnaVector2() + debugOrigin, p.P.ToXnaVector2() + debugOrigin, Color.Yellow);
 
-                var vInCsoSystem = (p.X - p.V).ToXnaVector2();
-                SpriteBatch.DrawString(DefaultFont, "v", vInCsoSystem + debugOrigin + new Vector2(2, 2),
-                    Color.LightGreen, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0);
-                SpriteBatch.DrawLine(p.X.ToXnaVector2() + debugOrigin, vInCsoSystem + debugOrigin, Color.MediumPurple);
+                SpriteBatch.DrawLine(p.X.ToXnaVector2() + debugOrigin, p.P.ToXnaVector2() + debugOrigin, Color.Yellow);
+                var wLabelPos = ((p.P + p.X) / 2f).ToXnaVector2();
+                SpriteBatch.DrawString(DefaultFont, "w", wLabelPos + debugOrigin,
+                    Color.LightGreen, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0);
+                SpriteBatch.DrawPoint(p.P.ToXnaVector2() + debugOrigin, Color.Yellow, size: 4f);
+
+                var vInCsoSystem = p.X - p.V;
+                SpriteBatch.DrawLine(p.X.ToXnaVector2() + debugOrigin, vInCsoSystem.ToXnaVector2() + debugOrigin, Color.MediumPurple);
+                var vLabelPos = ((vInCsoSystem + p.X) / 2f).ToXnaVector2();
+                SpriteBatch.DrawString(DefaultFont, "v", vLabelPos + debugOrigin,
+                    Color.LightGreen, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0);
+                
+                SpriteBatch.DrawString(DefaultFont, "x", p.X.ToXnaVector2() + debugOrigin + new Vector2(2, 2),
+                    Color.LightGreen, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0);
+                SpriteBatch.DrawPoint(p.X.ToXnaVector2() + debugOrigin, Color.Yellow, size: 4f);
+
+                for (var i = 0; i < p.VertexCount; i += 1)
+                {
+                    SpriteBatch.DrawPoint(p.SetP[i].ToXnaVector2() + debugOrigin, Color.Yellow, size: 4f);
+                    SpriteBatch.DrawString(DefaultFont, $"p{i.ToString()}", p.SetP[i].ToXnaVector2() + debugOrigin + new Vector2(2, 2),
+                        Color.LightGreen, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0);
+                }
 
                 switch (p.VertexCount)
                 {
