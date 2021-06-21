@@ -105,7 +105,7 @@ namespace MonoGameExample
             e.Set(new Hittable {Collider = randomCollider});
 
             _rs.NextUnitVector(out var randomDirection);
-            var randomSpeed = _rs.NextSingle(100, 2000);
+            var randomSpeed = _rs.NextSingle(2000, 20000);
             var vel = randomDirection.ToSystemVector2() * randomSpeed;
             // var vel = new SystemVector2(-1, 0.5f) * randomSpeed;
             e.Set(new RigidBody {Velocity = vel, AngularVelocity = 0f});
@@ -201,7 +201,12 @@ namespace MonoGameExample
                 var movementB = transformB.Movement;
                 var capsuleB = hittableB.Collider.SweptCapsule(colliderTransformB, movementB);
 
-                if (!SweptCapsule.Intersection(ref capsuleA, ref capsuleB)) continue;
+                if (!SweptCapsule.Intersection(ref capsuleA, ref capsuleB))
+                {
+                    // TODO: intersection debug
+                    System.Diagnostics.Debugger.Break();
+                    continue;
+                }
                 _capsuleIntersectionBuffer.Add((aIndex, bIndex));
 
                 var realCollision = _collision.Continuous(

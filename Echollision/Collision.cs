@@ -154,8 +154,7 @@ namespace ViLAWAVE.Echollision
             normal = Vector2.Zero;
 
             // Initial v = x − “arbitrary point in C”
-            // TODO: no minus
-            var v = -(a.WorldSupport(transformA, Vector2.UnitX) - b.WorldSupport(transformB, -Vector2.UnitX));
+            var v = b.WorldSupport(transformB, -Vector2.UnitX) - a.WorldSupport(transformA, Vector2.UnitX);
 
 #if COLLISION_DEBUG
             Detail.Clear();
