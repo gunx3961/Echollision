@@ -1,4 +1,4 @@
-﻿#define DEBUG_DRAW
+﻿#define COLLISION_DEBUG
 
 using System;
 using System.Diagnostics;
@@ -6,17 +6,25 @@ using System.Numerics;
 
 namespace ViLAWAVE.Echollision
 {
-    public static class Collision
+    public class Collision
     {
-        // TODO: configuration
-        private const float ToleranceGjk = 1e-6f; // [van der Bergen 2003] P.143
-        private const float RelativeErrorBound = 0.001f; // 0.1%
-        
-        private const float ToleranceMpr = 0.01f; // This is just enough
+        public Collision(
+            float toleranceGjk = 1e-6f, // [van der Bergen 2003] P.143
+            float relativeErrorBound = 0.001f, // 0.1%
+            float toleranceMpr = 0.01f // This is just enough
+        )
+        {
+            _toleranceGjk = toleranceGjk;
+            _relativeErrorBound = relativeErrorBound;
+            _toleranceMpr = toleranceMpr;
+        }
 
-#if DEBUG_DRAW
-        // TODO: Debug info
-        public static int Foobar = 1;
+        private readonly float _toleranceGjk;
+        private readonly float _relativeErrorBound;
+        private readonly float _toleranceMpr;
+
+#if COLLISION_DEBUG
+        internal readonly CollisionDetail Detail = new CollisionDetail();
 #endif
 
         /// <summary>
@@ -27,7 +35,7 @@ namespace ViLAWAVE.Echollision
         /// <param name="b">Object B.</param>
         /// <param name="transformB">The transform of object B.</param>
         /// <returns>The distance between two objects.</returns>
-        public static float Distance(
+        public float Distance(
             Collider a, in ColliderTransform transformA,
             Collider b, in ColliderTransform transformB
         )
@@ -35,10 +43,8 @@ namespace ViLAWAVE.Echollision
             // Distance query by GJK distance algorithm with Signed Volumes distance sub-algorithm
             var k = 0;
 
-#if DEBUG_DRAW
-            DebugDraw.Clear();
-            DebugDraw.DrawString("origin", Vector2.Zero);
-            DebugDraw.DrawPoint(Vector2.Zero);
+#if COLLISION_DEBUG
+            Detail.Clear();
 #endif
 
             // Pick arbitrary support point as initial v
@@ -55,13 +61,14 @@ namespace ViLAWAVE.Echollision
                 k += 1;
                 var w = a.WorldSupport(transformA, -v) - b.WorldSupport(transformB, v);
 
-#if DEBUG_DRAW
-                var negativeVDirection = Vector2.Normalize(-v) * 100;
-                DebugDraw.UpdateIterationCounter(k);
-                DebugDraw.DrawLine(Vector2.Zero, negativeVDirection);
-                DebugDraw.DrawString($"-v{(k - 1).ToString()}", negativeVDirection);
-                DebugDraw.DrawPoint(w);
-                DebugDraw.DrawString($"w{(k - 1).ToString()}", w);
+#if COLLISION_DEBUG
+                Detail.UpdateIterationCounter(k);
+                // var negativeVDirection = Vector2.Normalize(-v) * 100;
+                // DebugDraw.UpdateIterationCounter(k);
+                // DebugDraw.DrawLine(Vector2.Zero, negativeVDirection);
+                // DebugDraw.DrawString($"-v{(k - 1).ToString()}", negativeVDirection);
+                // DebugDraw.DrawPoint(w);
+                // DebugDraw.DrawString($"w{(k - 1).ToString()}", w);
 #endif
 
                 int i;
@@ -72,7 +79,7 @@ namespace ViLAWAVE.Echollision
 
                 var vkLengthSquared = v.LengthSquared();
                 var vDotW = Vector2.Dot(v, w);
-                var vIsCloseToVFactor = RelativeErrorBound * vkLengthSquared;
+                var vIsCloseToVFactor = _relativeErrorBound * vkLengthSquared;
                 if (vkLengthSquared - vDotW <= vIsCloseToVFactor)
                 {
                     return v.Length();
@@ -94,10 +101,11 @@ namespace ViLAWAVE.Echollision
                     v += lambda[i] * setW[i];
                 }
 
-#if DEBUG_DRAW
-                DebugDraw.DrawGjkProcedure(wCount, setW, v, w);
-                DebugDraw.DrawPoint(v);
-                DebugDraw.DrawString($"v{k}", v);
+#if COLLISION_DEBUG
+                Detail.PushGjkProcedure(wCount, setW, v, w);
+                // DebugDraw.DrawGjkProcedure(wCount, setW, v, w);
+                // DebugDraw.DrawPoint(v);
+                // DebugDraw.DrawString($"v{k}", v);
 #endif
 
                 // Termination
@@ -108,7 +116,7 @@ namespace ViLAWAVE.Echollision
                     if (wls > maxWLengthSquared) maxWLengthSquared = wls;
                 }
 
-                if (wCount >= 3 || vkLengthSquared <= ToleranceGjk * maxWLengthSquared)
+                if (wCount >= 3 || vkLengthSquared <= _toleranceGjk * maxWLengthSquared)
                 {
                     // We regard v as zero
                     return 0f;
@@ -132,7 +140,7 @@ namespace ViLAWAVE.Echollision
         /// <param name="toi">Time of impact.</param>
         /// <param name="normal">Normal at hit point from B to A, of which length is not guaranteed to be 1.</param>
         /// <returns>Whether will collide.</returns>
-        public static bool Continuous(
+        public bool Continuous(
             Collider a, in ColliderTransform transformA, Vector2 translationA,
             Collider b, in ColliderTransform transformB, Vector2 translationB,
             out float toi, out Vector2 normal
@@ -148,12 +156,9 @@ namespace ViLAWAVE.Echollision
             // Initial v = x − “arbitrary point in C”
             var v = -(a.WorldSupport(transformA, Vector2.UnitX) - b.WorldSupport(transformB, -Vector2.UnitX));
 
-#if DEBUG_DRAW
-            DebugDraw.Clear();
-            DebugDraw.DrawString("origin", Vector2.Zero);
-            DebugDraw.DrawPoint(Vector2.Zero);
-            DebugDraw.DrawString("ray", ray);
-            DebugDraw.DrawLine(Vector2.Zero, ray);
+#if COLLISION_DEBUG
+            Detail.Clear();
+            Detail.GjkRayCastContext.Ray = ray;
 #endif
 
             Span<Vector2> setP = stackalloc Vector2[3];
@@ -176,13 +181,13 @@ namespace ViLAWAVE.Echollision
                     if (ls > maxPxLengthSquared) maxPxLengthSquared = ls;
                 }
 
-                if (vLengthSquared <= ToleranceGjk * maxPxLengthSquared) break;
+                if (vLengthSquared <= _toleranceGjk * maxPxLengthSquared) break;
 
                 var p = a.WorldSupport(transformA, v) - b.WorldSupport(transformB, -v);
                 var w = x - p;
 
-#if DEBUG_DRAW
-                DebugDraw.DrawGjkRayCastProcedure(x, p, pCount, setP, v);
+#if COLLISION_DEBUG
+                Detail.PushGjkRayCastProcedure(x, p, pCount, setP, v);
 #endif
 
                 var vDotW = Vector2.Dot(v, w);
@@ -234,8 +239,8 @@ namespace ViLAWAVE.Echollision
                     }
                 }
             }
-#if DEBUG_DRAW
-            DebugDraw.UpdateIterationCounter(k);
+#if COLLISION_DEBUG
+            Detail.UpdateIterationCounter(k);
 #endif
 
             return true;
@@ -249,15 +254,13 @@ namespace ViLAWAVE.Echollision
         /// <param name="b">Object B.</param>
         /// <param name="transformB">The transform of object B.</param>
         /// <returns>Whether two objects intersect.</returns>
-        public static bool Intersection(
+        public bool Intersection(
             Collider a, in ColliderTransform transformA,
             Collider b, in ColliderTransform transformB
         )
         {
-#if DEBUG_DRAW
-            DebugDraw.Clear();
-            DebugDraw.DrawString("origin", Vector2.Zero);
-            DebugDraw.DrawPoint(Vector2.Zero);
+#if COLLISION_DEBUG
+            Detail.Clear();
 #endif
 
             var centerA = a.WorldCenter(transformA);
@@ -294,9 +297,9 @@ namespace ViLAWAVE.Echollision
 
                 var v3 = b.WorldSupport(transformB, supportDirection) - a.WorldSupport(transformA, -supportDirection);
 
-#if DEBUG_DRAW
-                DebugDraw.UpdateIterationCounter(i);
-                DebugDraw.DrawMprProcedure(v0, v1, v2, v3);
+#if COLLISION_DEBUG
+                Detail.UpdateIterationCounter(i);
+                Detail.PushMprProcedure(v0, v1, v2, v3);
 #endif
 
                 // Origin is outside of the support plane
@@ -307,7 +310,7 @@ namespace ViLAWAVE.Echollision
                 // Max refinement count limitation performs just like a relative error bound.
                 // TODO: termination strategy
                 var portalToSupportPlane = Vector2.Dot(Vector2.Normalize(supportDirection), v3 - v1);
-                if (portalToSupportPlane <= ToleranceMpr) return false;
+                if (portalToSupportPlane <= _toleranceMpr) return false;
 
                 supportDirection = v3 - v0;
                 ToPositiveNormal(ref supportDirection);
@@ -335,16 +338,14 @@ namespace ViLAWAVE.Echollision
         /// <param name="transformB">The transform of object B.</param>
         /// <param name="normal">Contact normal from B to A, of which length is not guaranteed to be 1.</param>
         /// <param name="depth">Penetration depth.</param>
-        public static void PenetrationDepth(
+        public void Penetration(
             Collider a, in ColliderTransform transformA,
             Collider b, in ColliderTransform transformB,
             out Vector2 normal, out float depth
         )
         {
-#if DEBUG_DRAW
-            DebugDraw.Clear();
-            DebugDraw.DrawString("origin", Vector2.Zero);
-            DebugDraw.DrawPoint(Vector2.Zero);
+#if COLLISION_DEBUG
+            Detail.Clear();
 #endif
             var centerA = a.WorldCenter(transformA);
             var centerB = b.WorldCenter(transformB);
@@ -377,10 +378,12 @@ namespace ViLAWAVE.Echollision
 
                 normal = minSupport;
                 depth = MathF.Sqrt(minLengthSquared);
-#if DEBUG_DRAW
+#if COLLISION_DEBUG
                 var aPoint = a.WorldSupport(transformA, -normal);
                 var bPoint = b.WorldSupport(transformB, normal);
-                DebugDraw.DrawPenetration(aPoint, bPoint, normal);
+                Detail.PenetrationContext.PointA = aPoint;
+                Detail.PenetrationContext.PointB = bPoint;
+                Detail.PenetrationContext.Normal = normal;
 #endif
                 return;
             }
@@ -398,10 +401,12 @@ namespace ViLAWAVE.Echollision
             {
                 depth = v0v1.Length() - originRay.Length();
                 normal = originRay;
-#if DEBUG_DRAW
+#if COLLISION_DEBUG
                 var aPoint = a.WorldSupport(transformA, -supportDirection);
                 var bPoint = b.WorldSupport(transformB, supportDirection);
-                DebugDraw.DrawPenetration(aPoint, bPoint, normal);
+                Detail.PenetrationContext.PointA = aPoint;
+                Detail.PenetrationContext.PointB = bPoint;
+                Detail.PenetrationContext.Normal = normal;
 #endif
                 return;
             }
@@ -419,20 +424,22 @@ namespace ViLAWAVE.Echollision
 
                 var v3 = b.WorldSupport(transformB, supportDirection) - a.WorldSupport(transformA, -supportDirection);
 
-#if DEBUG_DRAW
-                DebugDraw.UpdateIterationCounter(k);
-                DebugDraw.DrawMprProcedure(v0, v1, v2, v3);
+#if COLLISION_DEBUG
+                Detail.UpdateIterationCounter(k);
+                Detail.PushMprProcedure(v0, v1, v2, v3);
 #endif
                 // Portal reaches the boundary
                 var portalToSupportPlane = Vector2.Dot(Vector2.Normalize(supportDirection), v3 - v1);
-                if (portalToSupportPlane <= ToleranceMpr)
+                if (portalToSupportPlane <= _toleranceMpr)
                 {
                     normal = Vector2.Normalize(supportDirection);
                     depth = Vector2.Dot(v3, normal);
-#if DEBUG_DRAW
+#if COLLISION_DEBUG
                     var aPoint = a.WorldSupport(transformA, -supportDirection);
                     var bPoint = b.WorldSupport(transformB, supportDirection);
-                    DebugDraw.DrawPenetration(aPoint, bPoint, normal);
+                    Detail.PenetrationContext.PointA = aPoint;
+                    Detail.PenetrationContext.PointB = bPoint;
+                    Detail.PenetrationContext.Normal = normal;
 #endif
                     return;
                 }
@@ -446,10 +453,12 @@ namespace ViLAWAVE.Echollision
                 {
                     depth = (v0 - v3).Length() - originRay.Length();
                     normal = originRay;
-#if DEBUG_DRAW
+#if COLLISION_DEBUG
                     var aPoint = a.WorldSupport(transformA, -supportDirection);
                     var bPoint = b.WorldSupport(transformB, supportDirection);
-                    DebugDraw.DrawPenetration(aPoint, bPoint, normal);
+                    Detail.PenetrationContext.PointA = aPoint;
+                    Detail.PenetrationContext.PointB = bPoint;
+                    Detail.PenetrationContext.Normal = normal;
 #endif
                     return;
                 }
@@ -461,7 +470,7 @@ namespace ViLAWAVE.Echollision
             }
 
             // Cannot be here
-#if DEBUG_DRAW
+#if COLLISION_DEBUG
             throw new ApplicationException("Unexpected error.");
 #endif
             normal = Vector2.Zero;

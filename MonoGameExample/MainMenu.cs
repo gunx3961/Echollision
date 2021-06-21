@@ -92,7 +92,7 @@ namespace MonoGameExample
             {
                 var transform = clickable.Get<Transform2D>().ToCollisionTransform();
                 var collider = clickable.Get<ConvexCollider>();
-                var hit = Collision.Intersection(collider, transform, pointCollider,
+                var hit = Framework.Collision.Intersection(collider, transform, pointCollider,
                     new ColliderTransform(mousePosition, 0f));
 
                 if (!hit) continue;

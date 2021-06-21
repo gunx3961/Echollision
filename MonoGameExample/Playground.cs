@@ -182,7 +182,7 @@ namespace MonoGameExample
                 for (var o = 0; o < obs.Length; o += 1)
                 {
                     var obTransform = obs[o].Get<Transform2D>().ToCollisionTransform();
-                    var tempHit = Collision.Continuous(
+                    var tempHit = Framework.Collision.Continuous(
                         _obstructionCollider, obTransform, Vector2.Zero,
                         _bulletCollider, transform.ToCollisionTransform(), translation,
                         out var tempT, out var tempN
@@ -193,7 +193,7 @@ namespace MonoGameExample
                     // Already contact, resolve penetration
                     if (tempT == 0f)
                     {
-                        Collision.PenetrationDepth(_bulletCollider, transform.ToCollisionTransform(),
+                        Framework.Collision.Penetration(_bulletCollider, transform.ToCollisionTransform(),
                             _obstructionCollider, obTransform, out penetrationNormal, out var d);
                     }
 

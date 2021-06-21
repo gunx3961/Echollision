@@ -20,6 +20,7 @@ namespace MonoGameExample
         }
 
         private List<Collider> _colliders;
+        private Collision _collision;
         private Random _rs;
 
         private ISystem<GameTime> _logicalSystem;
@@ -36,6 +37,7 @@ namespace MonoGameExample
         {
             base.Initialize();
 
+            _collision = new Collision();
             _rs = new Random();
             _colliders = new List<Collider>();
             // _colliders.Add(new SphereCollider(0f));
@@ -202,7 +204,7 @@ namespace MonoGameExample
                 if (!SweptCapsule.Intersection(ref capsuleA, ref capsuleB)) continue;
                 _capsuleIntersectionBuffer.Add((aIndex, bIndex));
 
-                var realCollision = Collision.Continuous(
+                var realCollision = _collision.Continuous(
                     hittableA.Collider, colliderTransformA, movementA,
                     hittableB.Collider, colliderTransformB, movementB,
                     out var toi, out var n
@@ -218,7 +220,7 @@ namespace MonoGameExample
                 // Resolve penetration
                 if (toi == 0f)
                 {
-                    Collision.PenetrationDepth(
+                    _collision.Penetration(
                         hittableA.Collider, colliderTransformA,
                         hittableB.Collider, colliderTransformB,
                         out n, out var depth

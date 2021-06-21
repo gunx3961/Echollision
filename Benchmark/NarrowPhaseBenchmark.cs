@@ -10,6 +10,7 @@ namespace Benchmark
     {
         private const float Min = -1000f;
         private const float Max = 1000f;
+        private readonly Collision _collision = new Collision();
         private readonly Random _rs = new Random();
 
         [ParamsSource(nameof(RandomAllTypeColliders))]
@@ -55,7 +56,7 @@ namespace Benchmark
         {
             var ta = new ColliderTransform(TransformA.Item1, TransformA.Item2);
             var tb = new ColliderTransform(TransformB.Item1, TransformB.Item2);
-            return Collision.Intersection(ColliderA, ta, ColliderB, tb);
+            return _collision.Intersection(ColliderA, ta, ColliderB, tb);
         }
 
         [Benchmark]
@@ -63,7 +64,7 @@ namespace Benchmark
         {
             var ta = new ColliderTransform(TransformA.Item1, TransformA.Item2);
             var tb = new ColliderTransform(TransformB.Item1, TransformB.Item2);
-            return Collision.Distance(ColliderA, ta, ColliderB, tb);
+            return _collision.Distance(ColliderA, ta, ColliderB, tb);
         }
 
         [Benchmark]
@@ -71,7 +72,7 @@ namespace Benchmark
         {
             var ta = new ColliderTransform(TransformA.Item1, TransformA.Item2);
             var tb = new ColliderTransform(TransformB.Item1, TransformB.Item2);
-            Collision.PenetrationDepth(ColliderA, ta, ColliderB, tb, out var n, out var d);
+            _collision.Penetration(ColliderA, ta, ColliderB, tb, out var n, out var d);
             return;
         }
 
@@ -80,7 +81,7 @@ namespace Benchmark
         {
             var ta = new ColliderTransform(TransformA.Item1, TransformA.Item2);
             var tb = new ColliderTransform(TransformB.Item1, TransformB.Item2);
-            return Collision.Continuous(ColliderA, ta, MovementA, ColliderB, tb, MovementB, out var t, out var n);
+            return _collision.Continuous(ColliderA, ta, MovementA, ColliderB, tb, MovementB, out var t, out var n);
         }
     }
 }

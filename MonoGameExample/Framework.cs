@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Xna.Framework;
 using MonoGame.Extended.Input;
+using ViLAWAVE.Echollision;
 
 namespace MonoGameExample
 {
@@ -15,6 +16,9 @@ namespace MonoGameExample
         // Input
         public MouseStateExtended MouseState { get; private set; }
         public KeyboardStateExtended KeyboardState { get; private set; }
+        
+        // Collision
+        public readonly Collision Collision = new Collision();
 
         public Framework()
         {
