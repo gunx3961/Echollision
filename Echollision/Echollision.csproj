@@ -1,11 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
     <Nullable>enable</Nullable>
     <Company>ViLAWAVE</Company>
     <RootNamespace>ViLAWAVE.Echollision</RootNamespace>
     <LangVersion>9</LangVersion>
+    <AssemblyVersion>0.1.0</AssemblyVersion>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
 </Project>
