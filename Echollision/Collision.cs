@@ -1,6 +1,4 @@
-﻿#define COLLISION_DEBUG
-
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Numerics;
 
@@ -23,7 +21,7 @@ namespace ViLAWAVE.Echollision
         private readonly float _relativeErrorBound;
         private readonly float _toleranceMpr;
 
-#if COLLISION_DEBUG
+#if DEBUG
         internal readonly CollisionDetail Detail = new CollisionDetail();
 #endif
 
@@ -43,7 +41,7 @@ namespace ViLAWAVE.Echollision
             // Distance query by GJK distance algorithm with Signed Volumes distance sub-algorithm
             var k = 0;
 
-#if COLLISION_DEBUG
+#if DEBUG
             Detail.Clear();
 #endif
 
@@ -61,7 +59,7 @@ namespace ViLAWAVE.Echollision
                 k += 1;
                 var w = a.WorldSupport(transformA, -v) - b.WorldSupport(transformB, v);
 
-#if COLLISION_DEBUG
+#if DEBUG
                 Detail.UpdateIterationCounter(k);
                 // var negativeVDirection = Vector2.Normalize(-v) * 100;
                 // DebugDraw.UpdateIterationCounter(k);
@@ -101,7 +99,7 @@ namespace ViLAWAVE.Echollision
                     v += lambda[i] * setW[i];
                 }
 
-#if COLLISION_DEBUG
+#if DEBUG
                 Detail.PushGjkProcedure(wCount, setW, v, w);
                 // DebugDraw.DrawGjkProcedure(wCount, setW, v, w);
                 // DebugDraw.DrawPoint(v);
@@ -156,7 +154,7 @@ namespace ViLAWAVE.Echollision
             // Initial v = x − “arbitrary point in C”
             var v = b.WorldSupport(transformB, -Vector2.UnitX) - a.WorldSupport(transformA, Vector2.UnitX);
 
-#if COLLISION_DEBUG
+#if DEBUG
             Detail.Clear();
             Detail.GjkRayCastContext.Ray = ray;
 #endif
@@ -189,7 +187,7 @@ namespace ViLAWAVE.Echollision
                 var p = a.WorldSupport(transformA, v) - b.WorldSupport(transformB, -v);
                 var w = x - p;
 
-#if COLLISION_DEBUG
+#if DEBUG
                 Detail.PushGjkRayCastProcedure(x, p, pCount, setP, v);
 #endif
 
@@ -244,7 +242,7 @@ namespace ViLAWAVE.Echollision
                     }
                 }
             }
-#if COLLISION_DEBUG
+#if DEBUG
             Detail.UpdateIterationCounter(k);
 #endif
 
@@ -264,7 +262,7 @@ namespace ViLAWAVE.Echollision
             Collider b, in ColliderTransform transformB
         )
         {
-#if COLLISION_DEBUG
+#if DEBUG
             Detail.Clear();
 #endif
 
@@ -302,7 +300,7 @@ namespace ViLAWAVE.Echollision
 
                 var v3 = b.WorldSupport(transformB, supportDirection) - a.WorldSupport(transformA, -supportDirection);
 
-#if COLLISION_DEBUG
+#if DEBUG
                 Detail.UpdateIterationCounter(i);
                 Detail.PushMprProcedure(v0, v1, v2, v3);
 #endif
@@ -349,7 +347,7 @@ namespace ViLAWAVE.Echollision
             out Vector2 normal, out float depth
         )
         {
-#if COLLISION_DEBUG
+#if DEBUG
             Detail.Clear();
 #endif
             var centerA = a.WorldCenter(transformA);
@@ -383,7 +381,7 @@ namespace ViLAWAVE.Echollision
 
                 normal = minSupport;
                 depth = MathF.Sqrt(minLengthSquared);
-#if COLLISION_DEBUG
+#if DEBUG
                 var aPoint = a.WorldSupport(transformA, -normal);
                 var bPoint = b.WorldSupport(transformB, normal);
                 Detail.PenetrationContext.PointA = aPoint;
@@ -406,7 +404,7 @@ namespace ViLAWAVE.Echollision
             {
                 depth = v0v1.Length() - originRay.Length();
                 normal = originRay;
-#if COLLISION_DEBUG
+#if DEBUG
                 var aPoint = a.WorldSupport(transformA, -supportDirection);
                 var bPoint = b.WorldSupport(transformB, supportDirection);
                 Detail.PenetrationContext.PointA = aPoint;
@@ -429,7 +427,7 @@ namespace ViLAWAVE.Echollision
 
                 var v3 = b.WorldSupport(transformB, supportDirection) - a.WorldSupport(transformA, -supportDirection);
 
-#if COLLISION_DEBUG
+#if DEBUG
                 Detail.UpdateIterationCounter(k);
                 Detail.PushMprProcedure(v0, v1, v2, v3);
 #endif
@@ -439,7 +437,7 @@ namespace ViLAWAVE.Echollision
                 {
                     normal = Vector2.Normalize(supportDirection);
                     depth = Vector2.Dot(v3, normal);
-#if COLLISION_DEBUG
+#if DEBUG
                     var aPoint = a.WorldSupport(transformA, -supportDirection);
                     var bPoint = b.WorldSupport(transformB, supportDirection);
                     Detail.PenetrationContext.PointA = aPoint;
@@ -458,7 +456,7 @@ namespace ViLAWAVE.Echollision
                 {
                     depth = (v0 - v3).Length() - originRay.Length();
                     normal = originRay;
-#if COLLISION_DEBUG
+#if DEBUG
                     var aPoint = a.WorldSupport(transformA, -supportDirection);
                     var bPoint = b.WorldSupport(transformB, supportDirection);
                     Detail.PenetrationContext.PointA = aPoint;
@@ -475,7 +473,7 @@ namespace ViLAWAVE.Echollision
             }
 
             // Cannot be here
-#if COLLISION_DEBUG
+#if DEBUG
             throw new ApplicationException("Unexpected error.");
 #endif
             normal = Vector2.Zero;

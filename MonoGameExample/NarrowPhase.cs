@@ -450,7 +450,9 @@ namespace MonoGameExample
         }
 
         private Vector2 DebugOrigin => Framework.LogicalSize.ToVector2() / 2;
-
+#if !DEBUG
+        private CollisionDetail _detailPolyfill = new CollisionDetail();
+#endif
         private void DrawResult(GameTime gameTime)
         {
             // A & B
@@ -487,8 +489,11 @@ namespace MonoGameExample
                         debugOrigin, _continuousResult.Intersection ? ColorCollision : ColorCso);
                     break;
             }
-
+#if DEBUG
             var detail = Framework.Collision.Detail;
+#else
+            var detail = _detailPolyfill;
+#endif
             const int ratioBarThickness = 10;
             // Iteration counter
             var counterPosition = new Vector2(0, Framework.LogicalSize.Y - DefaultFont.LineSpacing * 3 - ratioBarThickness);
