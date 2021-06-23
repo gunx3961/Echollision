@@ -380,7 +380,13 @@ namespace ViLAWAVE.Echollision
                 }
 
                 normal = minSupport;
+
+#if NETSTANDARD2_0
+                depth = (float) Math.Sqrt(Convert.ToDouble(minLengthSquared));
+#else
                 depth = MathF.Sqrt(minLengthSquared);
+#endif
+
 #if DEBUG
                 var aPoint = a.WorldSupport(transformA, -normal);
                 var bPoint = b.WorldSupport(transformB, normal);

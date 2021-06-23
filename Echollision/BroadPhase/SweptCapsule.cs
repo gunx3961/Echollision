@@ -15,7 +15,7 @@ namespace ViLAWAVE.Echollision.BroadPhase
         internal Vector2 A;
         internal Vector2 B;
         internal float R;
-        
+
         internal static bool Intersection(ref SweptCapsule a, ref SweptCapsule b)
         {
             var distanceSquared = DistanceSquaredSegmentSegment(ref a.A, ref a.B, ref b.A, ref b.B);
@@ -49,7 +49,11 @@ namespace ViLAWAVE.Echollision.BroadPhase
             if (aIsZero)
             {
                 s = 0f;
+#if NETSTANDARD2_0
+                t = MathHelper.Clamp(f / e, 0f, 1f);
+#else
                 t = Math.Clamp(f / e, 0f, 1f);
+#endif
             }
             else
             {
@@ -59,27 +63,42 @@ namespace ViLAWAVE.Echollision.BroadPhase
                 if (eIsZero)
                 {
                     t = 0f;
+#if NETSTANDARD2_0
+                    s = MathHelper.Clamp(-c / a, 0f, 1f);
+#else
                     s = Math.Clamp(-c / a, 0f, 1f);
+#endif
                 }
                 else
                 {
                     // General case
                     var b = Vector2.Dot(d1, d2);
                     var denom = a * e - b * b;
-
+#if NETSTANDARD2_0
+                    s = denom != 0f ? MathHelper.Clamp((b * f - c * e) / denom, 0f, 1f) : 0f;
+#else
                     s = denom != 0f ? Math.Clamp((b * f - c * e) / denom, 0f, 1f) : 0f;
+#endif
 
                     t = (b * s + f) / e;
 
                     if (t < 0f)
                     {
                         t = 0f;
+#if NETSTANDARD2_0
+                        s = MathHelper.Clamp(-c / a, 0f, 1f);
+#else
                         s = Math.Clamp(-c / a, 0f, 1f);
+#endif
                     }
                     else if (t > 1f)
                     {
                         t = 1f;
+#if NETSTANDARD2_0
+                        s = MathHelper.Clamp((b - c) / a, 0f, 1f);
+#else
                         s = Math.Clamp((b - c) / a, 0f, 1f);
+#endif
                     }
                 }
             }

@@ -18,14 +18,14 @@ namespace ViLAWAVE.Echollision
         /// </summary>
         /// <returns>The geometry center.</returns>
         internal abstract Vector2 Center();
-        
+
         /// <summary>
         /// The support function that implicitly defines the shape of this collider in object coordinate.
         /// </summary>
         /// <param name="direction">The support direction in object coordinate.</param>
         /// <returns>The support point.</returns>
         internal abstract Vector2 Support(Vector2 direction);
-        
+
         /// <summary>
         /// Returns the center of collider in world coordinate.
         /// </summary>
@@ -75,14 +75,22 @@ namespace ViLAWAVE.Echollision
         internal BoundingSphere BoundingSphere(in ColliderTransform transform)
         {
             var center = Vector2.Transform(_boundingCenter, transform.Matrix());
+#if NETSTANDARD2_0
+            var scale = Math.Max(transform.Scale.X, transform.Scale.Y);
+#else
             var scale = MathF.Max(transform.Scale.X, transform.Scale.Y);
+#endif
             return new BoundingSphere {Center = center, Radius = _boundingRadius * scale};
         }
-        
+
         internal SweptCapsule SweptCapsule(in ColliderTransform transform, Vector2 movement)
         {
             var center = Vector2.TransformNormal(_boundingCenter, transform.Matrix());
+#if NETSTANDARD2_0
+            var scale = Math.Max(transform.Scale.X, transform.Scale.Y);
+#else
             var scale = MathF.Max(transform.Scale.X, transform.Scale.Y);
+#endif
             return new SweptCapsule(center, center + movement, _boundingRadius * scale);
         }
 

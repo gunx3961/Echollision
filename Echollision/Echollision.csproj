@@ -6,7 +6,12 @@
     <RootNamespace>ViLAWAVE.Echollision</RootNamespace>
     <LangVersion>8</LangVersion>
     <AssemblyVersion>0.1.0</AssemblyVersion>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFrameworks>netcoreapp3.1;netstandard2.0</TargetFrameworks>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Memory" Version="4.5.4" />
+    <PackageReference Include="System.Numerics.Vectors" Version="4.5.0" />
+  </ItemGroup>
 
 </Project>
