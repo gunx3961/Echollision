@@ -11,5 +11,5 @@ Hybrid 2D collision detection for .NET platforms.
 - Broad phase collision detection.
 
 ## Target Platforms
-- .NET Standard 2.1
-- .NET 5
+- .NET Standard 2.0
+- .NET Core 3.1
