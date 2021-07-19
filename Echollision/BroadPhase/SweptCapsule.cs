@@ -16,7 +16,7 @@ namespace ViLAWAVE.Echollision.BroadPhase
         internal Vector2 B;
         internal float R;
 
-        internal static bool Intersection(ref SweptCapsule a, ref SweptCapsule b)
+        public static bool Intersection(ref SweptCapsule a, ref SweptCapsule b)
         {
             var distanceSquared = DistanceSquaredSegmentSegment(ref a.A, ref a.B, ref b.A, ref b.B);
             var r = a.R + b.R;
