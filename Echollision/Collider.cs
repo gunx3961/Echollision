@@ -37,7 +37,6 @@ namespace ViLAWAVE.Echollision
             return Vector2.Transform(Center(), rotation) + transform.Translation;
         }
 
-        // TODO: make it internal
         /// <summary>
         /// Returns the support point in world coordinate.
         /// </summary>
@@ -72,7 +71,7 @@ namespace ViLAWAVE.Echollision
             _boundingCenter = new Vector2((xMin.X + xMax.X) / 2f, (yMin.Y + yMax.Y) / 2f);
         }
 
-        internal BoundingSphere BoundingSphere(in ColliderTransform transform)
+        public BoundingSphere BoundingSphere(in ColliderTransform transform)
         {
             var center = Vector2.Transform(_boundingCenter, transform.Matrix());
 #if NETSTANDARD2_0
@@ -83,7 +82,7 @@ namespace ViLAWAVE.Echollision
             return new BoundingSphere {Center = center, Radius = _boundingRadius * scale};
         }
 
-        internal SweptCapsule SweptCapsule(in ColliderTransform transform, Vector2 movement)
+        public SweptCapsule SweptCapsule(in ColliderTransform transform, Vector2 movement)
         {
             var center = Vector2.TransformNormal(_boundingCenter, transform.Matrix());
 #if NETSTANDARD2_0
@@ -94,7 +93,7 @@ namespace ViLAWAVE.Echollision
             return new SweptCapsule(center, center + movement, _boundingRadius * scale);
         }
 
-        internal SweptBox SweepBox(in ColliderTransform transform, Vector2 movement)
+        public SweptBox SweepBox(in ColliderTransform transform, Vector2 movement)
         {
             var center = Vector2.Transform(_boundingCenter, transform.Matrix());
             var b = new SweptBox {From = center, To = center};
