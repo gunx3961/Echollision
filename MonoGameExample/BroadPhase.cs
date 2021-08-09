@@ -152,7 +152,6 @@ namespace MonoGameExample
                 var colliderTransform = transform.ToColliderTransform();
                 var movement = transform.DestinationPosition - transform.Position;
                 var box = hittable.Collider.SweepBox(colliderTransform, movement);
-                box.Id = es[i].GetHashCode();
                 hittable.SweptBox = box;
                 // boxes[i] = box;
             }

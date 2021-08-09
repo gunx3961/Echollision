@@ -6,6 +6,5 @@ namespace ViLAWAVE.Echollision.BroadPhase
     {
         public Vector2 From;
         public Vector2 To;
-        public int Id;
     }
 }
