@@ -37,7 +37,7 @@ namespace Test
         }
 
         [Fact]
-        public void PenetrationIllCase()
+        public void MprDegenerateCase()
         {
             var a = new SphereCollider(0);
             var ta = new ColliderTransform(new Vector2(203.33334f, 239.99979f));
@@ -50,7 +50,9 @@ namespace Test
             });
             var tb = new ColliderTransform(new Vector2(300, 300));
 
-            _collision.Penetration(a, ta, b, tb, out var n, out var depth);
+            var penetration = _collision.Penetration(a, ta, b, tb, out var n, out var depth);;
+            Assert.False(penetration);
+
             var intersection = _collision.Intersection(a, ta, b, tb);
             Assert.False(intersection);
         }

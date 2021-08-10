@@ -286,6 +286,10 @@ namespace ViLAWAVE.Echollision
 
             supportDirection *= v0v1NormalSign;
             var v2 = b.WorldSupport(transformB, supportDirection) - a.WorldSupport(transformA, -supportDirection);
+            
+            // Here v1 and v2 can be the same vertex in some degenerate convex
+            // TODO: Review
+            if (v1 == v2) return false;
 
             // TODO: Safe option
             const int maxRefinement = 10;
@@ -341,7 +345,8 @@ namespace ViLAWAVE.Echollision
         /// <param name="transformB">The transform of object B.</param>
         /// <param name="normal">Contact normal from B to A, of which length is not guaranteed to be 1.</param>
         /// <param name="depth">Penetration depth.</param>
-        public void Penetration(
+        /// <returns>Is the penetration happened.</returns>
+        public bool Penetration(
             Collider a, in ColliderTransform transformA,
             Collider b, in ColliderTransform transformB,
             out Vector2 normal, out float depth
@@ -394,7 +399,7 @@ namespace ViLAWAVE.Echollision
                 Detail.PenetrationContext.PointB = bPoint;
                 Detail.PenetrationContext.Normal = normal;
 #endif
-                return;
+                return depth >= 0f;
             }
 
             var originRay = -v0;
@@ -417,16 +422,19 @@ namespace ViLAWAVE.Echollision
                 Detail.PenetrationContext.PointB = bPoint;
                 Detail.PenetrationContext.Normal = normal;
 #endif
-                return;
+                return depth >= 0f;
             }
 
             supportDirection *= v0v1NormalSign;
             var v2 = b.WorldSupport(transformB, supportDirection) - a.WorldSupport(transformA, -supportDirection);
             
             // Here v1 and v2 can be the same vertex in some degenerate convex
+            // TODO: Review
             if (v1 == v2)
             {
-                
+                normal = originRay;
+                depth = originRay.Length();
+                return false;
             }
 
             // Do refinement until portal reaches the boundary
@@ -456,7 +464,7 @@ namespace ViLAWAVE.Echollision
                     Detail.PenetrationContext.PointB = bPoint;
                     Detail.PenetrationContext.Normal = normal;
 #endif
-                    return;
+                    return depth >= 0f;
                 }
 
                 supportDirection = v3 - v0;
@@ -475,7 +483,7 @@ namespace ViLAWAVE.Echollision
                     Detail.PenetrationContext.PointB = bPoint;
                     Detail.PenetrationContext.Normal = normal;
 #endif
-                    return;
+                    return depth >= 0f;
                 }
 
                 // Choose new portal
@@ -490,6 +498,7 @@ namespace ViLAWAVE.Echollision
 #endif
             normal = Vector2.Zero;
             depth = 0f;
+            return false;
         }
 
         #region MPR Utils
