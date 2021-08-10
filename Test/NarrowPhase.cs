@@ -18,10 +18,10 @@ namespace Test
         {
             var a = new ConvexCollider(new[]
             {
-                new System.Numerics.Vector2(-160, -160),
-                new System.Numerics.Vector2(160, -160),
-                new System.Numerics.Vector2(160, 160),
-                new System.Numerics.Vector2(-160, 160)
+                new Vector2(-160, -160),
+                new Vector2(160, -160),
+                new Vector2(160, 160),
+                new Vector2(-160, 160)
             });
             var ta = new ColliderTransform(new Vector2(860, 650), 1168.25146f);
             var translationA = Vector2.Zero;
@@ -34,6 +34,25 @@ namespace Test
             Assert.True(result);
             Assert.True(t is > 0f and < 1f);
             Assert.True(n.LengthSquared() > 0);
+        }
+
+        [Fact]
+        public void PenetrationIllCase()
+        {
+            var a = new SphereCollider(0);
+            var ta = new ColliderTransform(new Vector2(203.33334f, 239.99979f));
+
+            var b = new ConvexCollider(new[]
+            {
+                new Vector2(-63.5f, -0.5f),
+                new Vector2(64.5f, 0.5f),
+                
+            });
+            var tb = new ColliderTransform(new Vector2(300, 300));
+
+            _collision.Penetration(a, ta, b, tb, out var n, out var depth);
+            var intersection = _collision.Intersection(a, ta, b, tb);
+            Assert.False(intersection);
         }
 
         [Fact]

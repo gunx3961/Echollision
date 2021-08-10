@@ -79,16 +79,16 @@ namespace MonoGameExample
         private int _debugCursor;
 
         // Position
-        private Vector2 _positionABase = new Vector2(500, 469);
+        private Vector2 _positionABase = new Vector2(200, 300);
         private Vector2 _positionAControl = Vector2.Zero;
         private Vector2 PositionA => _positionABase + _positionAControl;
 
-        private Vector2 _positionBBase = new Vector2(500, 250);
+        private Vector2 _positionBBase = new Vector2(264, 332);
         private Vector2 _positionBControl = Vector2.Zero;
         private Vector2 PositionB => _positionBBase + _positionBControl;
 
         // Movement
-        private Vector2 _movementA = new Vector2(0, 0);
+        private Vector2 _movementA = new Vector2(200, 0);
 
         private Vector2 _movementB = new Vector2(0, 0);
 
@@ -128,7 +128,6 @@ namespace MonoGameExample
                 new SystemVector2(200, -100),
                 new SystemVector2(100, 100),
             });
-
             _colliderA = new ConvexHullCollider(new Collider[]
             {
                 new SphereCollider(200),
@@ -139,6 +138,14 @@ namespace MonoGameExample
                     new SystemVector2(100, 100),
                 })
             });
+            _colliderA = new ConvexCollider(new[]
+            {
+                new SystemVector2(0, -31.5f),
+                new SystemVector2(16.5f, 0),
+                new SystemVector2(0, 31.5f),
+                new SystemVector2(-16.5f, 0)
+            });
+
 
             _colliderB = new SphereCollider(39610);
             _colliderB = new SphereCollider(0);
@@ -148,6 +155,13 @@ namespace MonoGameExample
                 new SystemVector2(100, -100),
                 new SystemVector2(100, 100),
                 new SystemVector2(-100, 100)
+            });
+            _colliderB = new ConvexCollider(new[]
+            {
+                new SystemVector2(-0.5f, -0.5f),
+                new SystemVector2(63.5f, -0.5f),
+                new SystemVector2(63.5f, 63.5f),
+                new SystemVector2(-0.5f, 63.5f)
             });
 
             base.Initialize();

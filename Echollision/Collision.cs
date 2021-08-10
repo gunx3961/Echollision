@@ -422,6 +422,12 @@ namespace ViLAWAVE.Echollision
 
             supportDirection *= v0v1NormalSign;
             var v2 = b.WorldSupport(transformB, supportDirection) - a.WorldSupport(transformA, -supportDirection);
+            
+            // Here v1 and v2 can be the same vertex in some degenerate convex
+            if (v1 == v2)
+            {
+                
+            }
 
             // Do refinement until portal reaches the boundary
             const int maxRefinement = 256;
