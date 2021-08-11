@@ -246,6 +246,10 @@ namespace ViLAWAVE.Echollision
             Detail.UpdateIterationCounter(k);
 #endif
 
+            // Don't report toi for motion away from the contact normal
+            // TODO: Review
+            if (Vector2.Dot(normal, ray) <= 0) return false;
+
             return true;
         }
 
@@ -286,7 +290,7 @@ namespace ViLAWAVE.Echollision
 
             supportDirection *= v0v1NormalSign;
             var v2 = b.WorldSupport(transformB, supportDirection) - a.WorldSupport(transformA, -supportDirection);
-            
+
             // Here v1 and v2 can be the same vertex in some degenerate convex
             // TODO: Review
             if (v1 == v2) return false;
@@ -427,7 +431,7 @@ namespace ViLAWAVE.Echollision
 
             supportDirection *= v0v1NormalSign;
             var v2 = b.WorldSupport(transformB, supportDirection) - a.WorldSupport(transformA, -supportDirection);
-            
+
             // Here v1 and v2 can be the same vertex in some degenerate convex
             // TODO: Review
             if (v1 == v2)
