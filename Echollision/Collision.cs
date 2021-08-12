@@ -349,11 +349,12 @@ namespace ViLAWAVE.Echollision
         /// <param name="transformB">The transform of object B.</param>
         /// <param name="normal">Contact normal from B to A, of which length is not guaranteed to be 1.</param>
         /// <param name="depth">Penetration depth.</param>
+        /// <param name="threshold">The threshold of depth to report penetration.</param>
         /// <returns>Is the penetration happened.</returns>
         public bool Penetration(
             Collider a, in ColliderTransform transformA,
             Collider b, in ColliderTransform transformB,
-            out Vector2 normal, out float depth
+            out Vector2 normal, out float depth, float threshold = 0f
         )
         {
 #if DEBUG
@@ -403,7 +404,7 @@ namespace ViLAWAVE.Echollision
                 Detail.PenetrationContext.PointB = bPoint;
                 Detail.PenetrationContext.Normal = normal;
 #endif
-                return depth >= 0f;
+                return depth >= threshold;
             }
 
             var originRay = -v0;
@@ -468,7 +469,7 @@ namespace ViLAWAVE.Echollision
                     Detail.PenetrationContext.PointB = bPoint;
                     Detail.PenetrationContext.Normal = normal;
 #endif
-                    return depth >= 0f;
+                    return depth >= threshold;
                 }
 
                 supportDirection = v3 - v0;
@@ -487,7 +488,7 @@ namespace ViLAWAVE.Echollision
                     Detail.PenetrationContext.PointB = bPoint;
                     Detail.PenetrationContext.Normal = normal;
 #endif
-                    return depth >= 0f;
+                    return depth >= threshold;
                 }
 
                 // Choose new portal
