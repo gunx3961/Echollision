@@ -6,7 +6,7 @@ namespace MonoGameExample.Ecs
     public struct Hittable
     {
         public Collider Collider;
-        public SweptBox SweptBox;
+        public Aabb SweptBox;
         public SweptCapsule SweptCapsule;
     }
 }

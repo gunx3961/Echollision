@@ -13,6 +13,10 @@ namespace ViLAWAVE.Echollision
     /// </summary>
     public abstract class Collider
     {
+        private float _boundingRadius;
+        private Vector2 _boundingCenter;
+        
+        
         /// <summary>
         /// Defines the geometry center of this collider in object coordinate.
         /// </summary>
@@ -82,6 +86,18 @@ namespace ViLAWAVE.Echollision
             return new BoundingSphere {Center = center, Radius = _boundingRadius * scale};
         }
 
+        public Aabb BoundingBox(in ColliderTransform transform)
+        {
+            var center = Vector2.Transform(_boundingCenter, transform.Matrix());
+            var b = new Aabb {From = center, To = center};
+            b.From.X -= _boundingRadius;
+            b.From.Y -= _boundingRadius;
+            b.To.X += _boundingRadius;
+            b.To.Y += _boundingRadius;
+
+            return b;
+        }
+
         public SweptCapsule SweptCapsule(in ColliderTransform transform, Vector2 movement)
         {
             var center = Vector2.TransformNormal(_boundingCenter, transform.Matrix());
@@ -93,10 +109,10 @@ namespace ViLAWAVE.Echollision
             return new SweptCapsule(center, center + movement, _boundingRadius * scale);
         }
 
-        public SweptBox SweepBox(in ColliderTransform transform, Vector2 movement)
+        public Aabb SweepBox(in ColliderTransform transform, Vector2 movement)
         {
             var center = Vector2.Transform(_boundingCenter, transform.Matrix());
-            var b = new SweptBox {From = center, To = center};
+            var b = new Aabb {From = center, To = center};
             if (movement.X > 0f)
             {
                 b.From.X -= _boundingRadius;
@@ -121,8 +137,5 @@ namespace ViLAWAVE.Echollision
 
             return b;
         }
-
-        private float _boundingRadius;
-        private Vector2 _boundingCenter;
     }
 }

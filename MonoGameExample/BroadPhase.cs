@@ -162,7 +162,7 @@ namespace MonoGameExample
             int CompareX(Entity a, Entity b) =>
                 Math.Sign(a.Get<Hittable>().SweptBox.From.X - b.Get<Hittable>().SweptBox.From.X);
 
-            int CompareY(SweptBox a, SweptBox b) => Math.Sign(a.From.Y - b.From.Y);
+            int CompareY(Aabb a, Aabb b) => Math.Sign(a.From.Y - b.From.Y);
 
             hittableEntities.Sort(CompareX); // O(n Log(n))
 
