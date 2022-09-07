@@ -10,6 +10,9 @@ Hybrid 2D collision detection for .NET platforms.
   - Penetration detection.
 - Broad phase collision detection.
 
+## Example
+![Screenshot](./Assets/0.png "Screenshot")
+
 ## Target Platforms
 - .NET Standard 2.0
 - .NET Core 3.1

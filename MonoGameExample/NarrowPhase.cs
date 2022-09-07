@@ -138,13 +138,13 @@ namespace MonoGameExample
                     new SystemVector2(100, 100),
                 })
             });
-            _colliderA = new ConvexCollider(new[]
-            {
-                new SystemVector2(0, -31.5f),
-                new SystemVector2(16.5f, 0),
-                new SystemVector2(0, 31.5f),
-                new SystemVector2(-16.5f, 0)
-            });
+            // _colliderA = new ConvexCollider(new[]
+            // {
+            //     new SystemVector2(0, -31.5f),
+            //     new SystemVector2(16.5f, 0),
+            //     new SystemVector2(0, 31.5f),
+            //     new SystemVector2(-16.5f, 0)
+            // });
 
 
             _colliderB = new SphereCollider(39610);
@@ -156,13 +156,13 @@ namespace MonoGameExample
                 new SystemVector2(100, 100),
                 new SystemVector2(-100, 100)
             });
-            _colliderB = new ConvexCollider(new[]
-            {
-                new SystemVector2(-0.5f, -0.5f),
-                new SystemVector2(63.5f, -0.5f),
-                new SystemVector2(63.5f, 63.5f),
-                new SystemVector2(-0.5f, 63.5f)
-            });
+            // _colliderB = new ConvexCollider(new[]
+            // {
+            //     new SystemVector2(-0.5f, -0.5f),
+            //     new SystemVector2(63.5f, -0.5f),
+            //     new SystemVector2(63.5f, 63.5f),
+            //     new SystemVector2(-0.5f, 63.5f)
+            // });
 
             base.Initialize();
         }
